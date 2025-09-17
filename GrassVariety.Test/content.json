@@ -1,0 +1,35 @@
+{
+  "$schema": "https://smapi.io/schemas/content-patcher.json",
+  "Format": "2.8.0",
+  "Changes": [
+    {
+      "Action": "Load",
+      "Target": "{{ModId}}/grass_bw, {{ModId}}/grass_inv",
+      "FromFile": "assets/{{TargetWithoutPath}}.png"
+    },
+    {
+      "Action": "EditData",
+      "Target": "mushymato.GrassVariety/Data",
+      "Entries": {
+        "{{ModId}}_Grayscale": {
+          "Id": "{{ModId}}_Grayscale",
+          "Texture": "{{ModId}}/grass_bw",
+          "Condition": null,
+          "Weight": 1,
+          "ApplyTo": [
+            1
+          ]
+        },
+        "{{ModId}}_Invert": {
+          "Id": "{{ModId}}_Invert",
+          "Texture": "{{ModId}}/grass_inv",
+          "Condition": null,
+          "Weight": 1,
+          "ApplyTo": [
+            1
+          ]
+        }
+      }
+    }
+  ]
+}
