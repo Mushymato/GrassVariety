@@ -23,6 +23,24 @@ public sealed class ModEntry : Mod
 
         AssetManager.Register(helper);
         GrassManager.Register(helper);
+
+        helper.ConsoleCommands.Add(
+            "gv-default_grass_weight",
+            "Set the weight for the vanilla grass variant (0 by default)",
+            ConsoleSetDefaultGrassWeight
+        );
+    }
+
+    private void ConsoleSetDefaultGrassWeight(string cmd, string[] args)
+    {
+        if (Config == null)
+            return;
+        if (args.Length == 0)
+            Config.DefaultGrassWeight = 0;
+        else if (int.TryParse(args[0], out int weight))
+            Config.DefaultGrassWeight = weight;
+        Log($"Default grass weight set to {Config.DefaultGrassWeight}");
+        Helper.GameContent.InvalidateCache(AssetManager.Asset_GrassVariety);
     }
 
     /// <summary>SMAPI static monitor Log wrapper</summary>

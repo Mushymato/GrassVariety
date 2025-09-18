@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -15,6 +16,9 @@ namespace GrassVariety;
 public static class GrassManager
 {
     internal const string LocationData_AllowedVarietyPrefix = $"{ModEntry.ModId}_AllowedVarietyPrefix";
+    internal const string ModData_ChosenVariant = $"{ModEntry.ModId}_ChosenVariant";
+
+    private static readonly FieldInfo Grass_whichWeed_Field = AccessTools.DeclaredField(typeof(Grass), "whichWeed");
 
     private static readonly PerScreen<List<GrassVarietyData>[]> grassVarietiesForCurrentLocation =
         new(AssetManager.InitGrassVarieties);
@@ -28,14 +32,48 @@ public static class GrassManager
         try
         {
             harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(Grass), "createDestroySprites"),
+                prefix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_createDestroySprites_Prefix))
+            );
+            harmony.Patch(
                 original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.textureName)),
                 postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_textureName_Postfix))
             );
         }
         catch (Exception ex)
         {
-            ModEntry.Log($"Failed to patch Grass.textureName, some visuals may be incorrect.\n{ex}", LogLevel.Warn);
+            ModEntry.Log($"Failed to patch GrassManager, some visuals may be incorrect.\n{ex}", LogLevel.Warn);
         }
+    }
+
+    private static bool Grass_createDestroySprites_Prefix(Grass __instance, GameLocation location, Vector2 tileLocation)
+    {
+        if (location == null)
+            return true;
+        if (
+            TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen)
+            && chosen.DestroyColors is List<GrassDestroyColor?> destroyColors
+        )
+        {
+            byte grassType = __instance.grassType.Value;
+            if (grassType < 1 || grassType > destroyColors.Count)
+                return true;
+            if (destroyColors[grassType - 1] is not GrassDestroyColor destroyColor)
+                return true;
+            Game1.Multiplayer.broadcastSprites(
+                location,
+                new TemporaryAnimatedSprite(
+                    28,
+                    tileLocation * 64f + new Vector2(Game1.random.Next(-16, 16), Game1.random.Next(-16, 16)),
+                    destroyColor.GetForSeason(location.GetSeason()),
+                    8,
+                    Game1.random.NextBool(),
+                    Game1.random.Next(60, 100)
+                )
+            );
+            return false;
+        }
+        return true;
     }
 
     private static void Grass_textureName_Postfix(Grass __instance, ref string __result)
@@ -145,27 +183,58 @@ public static class GrassManager
         location.terrainFeatures.OnValueTargetUpdated += OnGrassChanged;
     }
 
-    private static void ApplyGrassVariety(List<GrassVarietyData>[] gvfcl, Grass grass)
+    private static void ApplyGrassVariety(List<GrassVarietyData>[] gvfcl, Grass grass, bool newPlacement = false)
     {
-        byte grassType = grass.grassType.Value;
-        if (grassType < 1 || grassType > gvfcl.Length)
+        Random random = Utility.CreateDaySaveRandom(grass.Tile.X * 1000, grass.Tile.Y * 2000);
+        if (!TryGetChosenGrassVariety(grass, out GrassVarietyData? chosen))
+        {
+            byte grassType = grass.grassType.Value;
+            if (grassType < 1 || grassType > gvfcl.Length)
+                return;
+
+            List<GrassVarietyData> grassList = gvfcl[grassType - 1];
+            if (grassList.Count == 0)
+                return;
+
+            chosen = random.ChooseFrom(grassList);
+        }
+
+        if (chosen == null || chosen.Id == AssetManager.DEFAULT)
             return;
 
-        List<GrassVarietyData> grassList = gvfcl[grassType - 1];
-        if (grassList.Count == 0)
-            return;
-
-        GrassVarietyData chosen = Random.Shared.ChooseFrom(grassList);
-        if (chosen.Id == AssetManager.DEFAULT)
-            return;
         grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
+        if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
+        {
+            if (newPlacement)
+                grass.setUpRandom();
+            int[] whichWeed = new int[4];
+            for (int i = 0; i < 4; i++)
+            {
+                whichWeed[i] = random.ChooseFrom(chosen.SubVariants);
+            }
+            Grass_whichWeed_Field.SetValue(grass, whichWeed);
+        }
+        grass.modData[ModData_ChosenVariant] = chosen.Id;
+    }
+
+    private static bool TryGetChosenGrassVariety(Grass grass, [NotNullWhen(true)] out GrassVarietyData? chosen)
+    {
+        chosen = null;
+        if (
+            grass.modData.TryGetValue(ModData_ChosenVariant, out string chosenId)
+            && AssetManager.RawGrassVarieties.TryGetValue(chosenId, out chosen)
+        )
+        {
+            return chosen != null;
+        }
+        return false;
     }
 
     private static void OnNewGrassAdded(Vector2 key, TerrainFeature value)
     {
         if (value is Grass grass)
         {
-            ApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass);
+            ApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
         }
     }
 

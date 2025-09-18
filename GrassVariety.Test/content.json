@@ -4,41 +4,75 @@
   "Changes": [
     {
       "Action": "Load",
-      "Target": "{{ModId}}/grass_bw, {{ModId}}/grass_inv, {{ModId}}/grass_ourple",
+      "Target": "{{ModId}}/grass_three, {{ModId}}/grass_six",
       "FromFile": "assets/{{TargetWithoutPath}}.png"
     },
     {
       "Action": "EditData",
       "Target": "mushymato.GrassVariety/Data",
       "Entries": {
-        "{{ModId}}_Grayscale": {
-          "Id": "{{ModId}}_Grayscale",
-          "Texture": "{{ModId}}/grass_bw",
+        "{{ModId}}_three": {
+          "Id": "{{ModId}}_three",
+          "Texture": "{{ModId}}/grass_three",
           "Condition": null,
           "Weight": 1,
           "ApplyTo": [
-            1
+            "springGrass"
           ]
         },
-        "{{ModId}}_Invert": {
-          "Id": "{{ModId}}_Invert",
-          "Texture": "{{ModId}}/grass_inv",
+        "{{ModId}}_six": {
+          "Id": "{{ModId}}_six",
+          "Texture": "{{ModId}}/grass_six",
           "Condition": null,
           "Weight": 1,
+          "SubVariants": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
           "ApplyTo": [
-            7
-          ]
+            "springGrass",
+            // "caveGrass"
+            // "frostGrass"
+            // "lavaGrass"
+            // "caveGrass2"
+            // "cobweb"
+            "blueGrass"
+          ],
+          // "DestroyColors": [
+          //   "Black",
+          //   "Red",
+          //   "Yellow",
+          //   "Blue"
+          // ],
+          "DestroyColors": {
+            "springGrass": [
+              "Black",
+              "Red",
+              "Yellow",
+              "Blue"
+            ],
+            "blueGrass": [
+              "White",
+              "Green",
+              "Yellow",
+              "Blue"
+            ],
+          }
         },
-        "{{ModId}}_Ourple": {
-          "Id": "{{ModId}}_Ourple",
-          "Texture": "{{ModId}}/grass_ourple",
-          "Condition": null,
-          "ByLocationAllowanceOnly": true,
-          "Weight": 1,
-          "ApplyTo": [
-            7
-          ]
-        }
+        // "{{ModId}}_ourple": {
+        //   "Id": "{{ModId}}_ourple",
+        //   "Texture": "{{ModId}}/grass_ourple",
+        //   "Condition": null,
+        //   "ByLocationAllowanceOnly": true,
+        //   "Weight": 1,
+        //   "ApplyTo": [
+        //     "blueGrass"
+        //   ]
+        // }
       }
     },
     {
@@ -49,7 +83,7 @@
         "CustomFields"
       ],
       "Entries": {
-        "mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_Ourple"
+        "mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_six"
       }
     }
   ]
