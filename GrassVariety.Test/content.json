@@ -4,7 +4,7 @@
   "Changes": [
     {
       "Action": "Load",
-      "Target": "{{ModId}}/grass_bw, {{ModId}}/grass_inv",
+      "Target": "{{ModId}}/grass_bw, {{ModId}}/grass_inv, {{ModId}}/grass_ourple",
       "FromFile": "assets/{{TargetWithoutPath}}.png"
     },
     {
@@ -26,9 +26,30 @@
           "Condition": null,
           "Weight": 1,
           "ApplyTo": [
-            1
+            7
+          ]
+        },
+        "{{ModId}}_Ourple": {
+          "Id": "{{ModId}}_Ourple",
+          "Texture": "{{ModId}}/grass_ourple",
+          "Condition": null,
+          "ByLocationAllowanceOnly": true,
+          "Weight": 1,
+          "ApplyTo": [
+            7
           ]
         }
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Locations",
+      "TargetField": [
+        "BusStop",
+        "CustomFields"
+      ],
+      "Entries": {
+        "mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_Ourple"
       }
     }
   ]

@@ -11,8 +11,7 @@ public sealed class GrassVarietyData
     public string Id { get; set; } = null!;
     public string Texture { get; set; } = null!;
     public string? Condition { get; set; } = null;
-
-    // public int Precedence { get; set; } = 0;
+    public bool ByLocationAllowanceOnly { get; set; } = false;
     public int Weight { get; set; } = 1;
     public List<byte>? ApplyTo { get; set; } = null;
 

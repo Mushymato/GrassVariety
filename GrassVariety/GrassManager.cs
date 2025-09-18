@@ -95,7 +95,7 @@ public static class GrassManager
         List<GrassVarietyData>[] gvfcl = grassVarietiesForCurrentLocation.Value;
         gvfcl.ClearGrassVarieties();
 
-        if (TryGetLocationalProperty(location, LocationData_AllowedVarietyPrefix, out string? allowedVarietyPrefix))
+        if (!TryGetLocationalProperty(location, LocationData_AllowedVarietyPrefix, out string? allowedVarietyPrefix))
         {
             allowedVarietyPrefix = null;
         }
@@ -107,8 +107,17 @@ public static class GrassManager
             List<GrassVarietyData> grassList = gvfcl[grassType - 1];
             foreach (GrassVarietyData variety in varieties)
             {
-                if (allowedVarietyPrefix != null && !variety.Id.StartsWith(allowedVarietyPrefix))
-                    continue;
+                if (allowedVarietyPrefix == null)
+                {
+                    if (variety.ByLocationAllowanceOnly)
+                        continue;
+                }
+                else
+                {
+                    if (!variety.Id.StartsWith(allowedVarietyPrefix))
+                        continue;
+                }
+
                 if (GameStateQuery.CheckConditions(variety.Condition, ctx))
                 {
                     for (int i = 0; i < variety.Weight; i++)
