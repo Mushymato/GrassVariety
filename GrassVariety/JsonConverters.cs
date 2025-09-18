@@ -45,10 +45,26 @@ public class StringIntListConverter : JsonConverter
         return token.Type switch
         {
             JTokenType.Null => null,
-            JTokenType.String => token.ToObject<string>()?.Split(',') ?? null,
+            JTokenType.String => FromString(token.ToObject<string>()),
             JTokenType.Array => token.ToObject<List<int>>(),
-            _ => new List<int> { token.ToObject<int>()! },
+            _ => [token.ToObject<int>()!],
         };
+    }
+
+    private static List<int>? FromString(string? strValue)
+    {
+        if (string.IsNullOrEmpty(strValue))
+            return null;
+        string[] parts = strValue.Split(',');
+        List<int> result = [];
+        foreach (string part in parts)
+        {
+            if (int.TryParse(part, out int variant))
+            {
+                result.Add(variant);
+            }
+        }
+        return result.Count > 0 ? result : null;
     }
 
     public override bool CanWrite => false;

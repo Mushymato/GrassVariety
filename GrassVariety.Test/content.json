@@ -25,14 +25,7 @@
           "Texture": "{{ModId}}/grass_six",
           "Condition": null,
           "Weight": 1,
-          "SubVariants": [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
+          "SubVariants": "{{Range:0,5}}",
           "ApplyTo": [
             "springGrass",
             // "caveGrass"
