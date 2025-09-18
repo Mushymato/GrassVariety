@@ -18,7 +18,6 @@ public sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         Config = helper.ReadConfig<ModConfig>();
-        I18n.Init(helper.Translation);
         mon = Monitor;
 
         AssetManager.Register(helper);
