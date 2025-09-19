@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.GameData;
+using StardewValley.Internal;
 using StardewValley.TerrainFeatures;
 
 namespace GrassVariety;
@@ -80,12 +82,21 @@ public sealed record GrassDestroyColor(Color ClrSpring, Color ClrSummer, Color C
     }
 }
 
+public sealed class GrassOnCutItemSpawnData : GenericSpawnItemDataWithCondition
+{
+    public ItemQuerySearchMode SearchMode;
+}
+
 public sealed class GrassVarietyData
 {
     public string Id { get; set; } = null!;
+
     public string Texture { get; set; } = null!;
+
     public string? Condition { get; set; } = null;
+
     public bool ByLocationAllowanceOnly { get; set; } = false;
+
     public int Weight { get; set; } = 1;
 
     [JsonConverter(typeof(StringIntListConverter))]
@@ -96,6 +107,10 @@ public sealed class GrassVarietyData
 
     [JsonConverter(typeof(GrassDestroyColorListConverter))]
     public List<GrassDestroyColor?>? DestroyColors { get; set; } = null;
+
+    public List<GrassOnCutItemSpawnData>? OnCutItemSpawns { get; set; } = null;
+
+    public List<string>? OnCutTileActions { get; set; } = null;
 
     internal Texture2D LoadTexture() => Game1.content.Load<Texture2D>(Texture);
 }

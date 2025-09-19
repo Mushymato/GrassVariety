@@ -9,6 +9,8 @@ using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Delegates;
 using StardewValley.Extensions;
+using StardewValley.GameData;
+using StardewValley.Internal;
 using StardewValley.TerrainFeatures;
 
 namespace GrassVariety;
@@ -39,10 +41,51 @@ public static class GrassManager
                 original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.textureName)),
                 postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_textureName_Postfix))
             );
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.TryDropItemsOnCut)),
+                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_TryDropItemsOnCut_Postfix))
+            );
         }
         catch (Exception ex)
         {
             ModEntry.Log($"Failed to patch GrassManager, some visuals may be incorrect.\n{ex}", LogLevel.Warn);
+        }
+    }
+
+    private static void Grass_TryDropItemsOnCut_Postfix(Grass __instance, Tool tool, ref bool __result)
+    {
+        if (!__result)
+            return;
+        if (!TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen))
+            return;
+        Vector2 tile = __instance.Tile;
+        GameLocation location = __instance.Location;
+        Farmer who = tool.getLastFarmerToUse() ?? Game1.player;
+        if (chosen.OnCutItemSpawns != null)
+        {
+            GameStateQueryContext gqCtx = new(location, who, null, tool, null);
+            ItemQueryContext iqCtx = new(location, who, null, $"{ModEntry.ModId}:{chosen.Id} OnCut");
+            Vector2 tilePos = __instance.Tile * Game1.tileSize;
+            foreach (GrassOnCutItemSpawnData iq in chosen.OnCutItemSpawns)
+            {
+                if (!GameStateQuery.CheckConditions(iq.Condition, gqCtx))
+                    continue;
+                foreach (ItemQueryResult spawned in ItemQueryResolver.TryResolve(iq, iqCtx, iq.SearchMode))
+                {
+                    if (spawned.Item is Item item && item.Stack > 0)
+                    {
+                        Game1.createMultipleItemDebris(item, tilePos, -1, location);
+                    }
+                }
+            }
+        }
+        if (chosen.OnCutTileActions != null)
+        {
+            xTile.Dimensions.Location loc = new((int)tile.X, (int)tile.Y);
+            foreach (string tileAction in chosen.OnCutTileActions)
+            {
+                location.performAction(tileAction, who, loc);
+            }
         }
     }
 
@@ -137,6 +180,10 @@ public static class GrassManager
         {
             allowedVarietyPrefix = null;
         }
+        if (allowedVarietyPrefix != null)
+        {
+            ModEntry.Log($"Grass allowed variety prefix: {allowedVarietyPrefix}");
+        }
 
         byte grassType = 1;
         GameStateQueryContext ctx = new(location, Game1.player, null, null, null);
@@ -165,7 +212,7 @@ public static class GrassManager
                 }
             }
             if (grassList.Count > 0)
-                ModEntry.LogDebug(
+                ModEntry.Log(
                     $"Got {grassList.Count} varieties for grass type {grassType} in {location.NameOrUniqueName}"
                 );
             grassType++;
@@ -185,17 +232,24 @@ public static class GrassManager
 
     private static void ApplyGrassVariety(List<GrassVarietyData>[] gvfcl, Grass grass, bool newPlacement = false)
     {
-        Random random = Utility.CreateDaySaveRandom(grass.Tile.X * 1000, grass.Tile.Y * 2000);
-        if (!TryGetChosenGrassVariety(grass, out GrassVarietyData? chosen))
+        byte grassType = grass.grassType.Value;
+        if (grassType < 1 || grassType > gvfcl.Length)
+            return;
+        List<GrassVarietyData> grassList = gvfcl[grassType - 1];
+        if (grassList.Count == 0)
         {
-            byte grassType = grass.grassType.Value;
-            if (grassType < 1 || grassType > gvfcl.Length)
-                return;
+            grass.modData.Remove(ModData_ChosenVariant);
+            return;
+        }
 
-            List<GrassVarietyData> grassList = gvfcl[grassType - 1];
-            if (grassList.Count == 0)
-                return;
+        Random random = Utility.CreateDaySaveRandom(grass.Tile.X * 1000, grass.Tile.Y * 2000);
 
+        if (
+            newPlacement
+            || !TryGetChosenGrassVariety(grass, out GrassVarietyData? chosen)
+            || !grassList.Contains(chosen)
+        )
+        {
             chosen = random.ChooseFrom(grassList);
         }
 
@@ -227,6 +281,7 @@ public static class GrassManager
         {
             return chosen != null;
         }
+        grass.modData.Remove(ModData_ChosenVariant);
         return false;
     }
 
