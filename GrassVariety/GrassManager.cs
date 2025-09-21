@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -41,20 +42,32 @@ public static class GrassManager
         try
         {
             harmony.Patch(
-                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.TryDropItemsOnCut)),
-                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_TryDropItemsOnCut_Postfix))
-            );
-            harmony.Patch(
                 original: AccessTools.DeclaredMethod(
                     typeof(StardewValley.Object),
                     nameof(StardewValley.Object.placementAction)
                 ),
                 prefix: new HarmonyMethod(typeof(GrassManager), nameof(SObject_placementAction_Prefix))
             );
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(GameLocation), nameof(GameLocation.growWeedGrass)),
+                transpiler: new HarmonyMethod(typeof(GrassManager), nameof(GameLocation_growWeedGrass_Transpiler))
+            );
         }
         catch (Exception ex)
         {
-            ModEntry.Log($"Failed to patch Grass (drop item):\n{ex}", LogLevel.Error);
+            ModEntry.Log($"Failed to patch GrassVariety (custom grass starter):\n{ex}", LogLevel.Error);
+        }
+
+        try
+        {
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.TryDropItemsOnCut)),
+                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_TryDropItemsOnCut_Postfix))
+            );
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log($"Failed to patch GrassVariety (drop item):\n{ex}", LogLevel.Error);
         }
 
         try
@@ -70,7 +83,70 @@ public static class GrassManager
         }
         catch (Exception ex)
         {
-            ModEntry.Log($"Failed to patch Grass (visuals), some visuals may be incorrect.\n{ex}", LogLevel.Warn);
+            ModEntry.Log(
+                $"Failed to patch GrassVariety (visuals), some visuals may be incorrect.\n{ex}",
+                LogLevel.Warn
+            );
+        }
+    }
+
+    private static Grass ModifySpreadGrass(Grass newGrass, Grass sourceGrass)
+    {
+        if (TryGetForcedGrassVariety(sourceGrass, out GrassVarietyData? chosen))
+        {
+            newGrass.modData[ModData_ForcedVariant] = chosen.Id;
+        }
+        return newGrass;
+    }
+
+    private static IEnumerable<CodeInstruction> GameLocation_growWeedGrass_Transpiler(
+        IEnumerable<CodeInstruction> instructions,
+        ILGenerator generator
+    )
+    {
+        try
+        {
+            CodeMatcher matcher = new(instructions, generator);
+            // IL_015e: ldloc.s 4
+            // IL_0160: ldfld class Netcode.NetByte StardewValley.TerrainFeatures.Grass::grassType
+            // IL_0165: callvirt instance !0 class Netcode.NetFieldBase`2<uint8, class Netcode.NetByte>::get_Value()
+            // IL_016a: ldsfld class [System.Runtime]System.Random StardewValley.Game1::random
+            // IL_016f: ldc.i4.1
+            // IL_0170: ldc.i4.3
+            // IL_0171: callvirt instance int32 [System.Runtime]System.Random::Next(int32, int32)
+            // IL_0176: newobj instance void StardewValley.TerrainFeatures.Grass::.ctor(int32, int32)
+            CodeMatch[] toMatchFor =
+            [
+                new(inst => inst.IsLdloc()),
+                new(OpCodes.Ldfld, AccessTools.DeclaredField(typeof(Grass), nameof(Grass.grassType))),
+                new(
+                    OpCodes.Callvirt,
+                    AccessTools.DeclaredPropertyGetter(typeof(Netcode.NetByte), nameof(Netcode.NetByte.Value))
+                ),
+                new(OpCodes.Ldsfld, AccessTools.DeclaredField(typeof(Game1), nameof(Game1.random))),
+                new(OpCodes.Ldc_I4_1),
+                new(OpCodes.Ldc_I4_3),
+                new(OpCodes.Callvirt, AccessTools.DeclaredField(typeof(Random), nameof(Random.Next))),
+                new(OpCodes.Newobj, AccessTools.DeclaredConstructor(typeof(Grass), [typeof(int), typeof(int)])),
+            ];
+            matcher
+                .MatchStartForward(toMatchFor)
+                .ThrowIfNotMatch("Failed to find 'new Grass(grass.grassType.Value, Game1.random.Next(1, 3))'");
+            CodeInstruction sourceGrassLoc = new(matcher.Opcode, matcher.Operand);
+            matcher.Advance(toMatchFor.Length);
+            matcher.Insert(
+                [
+                    sourceGrassLoc,
+                    new(OpCodes.Call, AccessTools.DeclaredMethod(typeof(GrassManager), nameof(ModifySpreadGrass))),
+                ]
+            );
+
+            return matcher.Instructions();
+        }
+        catch (Exception err)
+        {
+            ModEntry.Log($"Error in Building_draw_Transpiler:\n{err}", LogLevel.Error);
+            return instructions;
         }
     }
 
@@ -382,6 +458,14 @@ public static class GrassManager
     }
 
     private static void OnNewGrassAdded(Vector2 key, TerrainFeature value)
+    {
+        if (value is Grass grass)
+        {
+            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
+        }
+    }
+
+    private static void OnNewGrassAddedBySpread(Vector2 key, TerrainFeature value)
     {
         if (value is Grass grass)
         {

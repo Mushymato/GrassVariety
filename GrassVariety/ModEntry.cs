@@ -20,8 +20,8 @@ public sealed class ModEntry : Mod
         Config = helper.ReadConfig<ModConfig>();
         mon = Monitor;
 
-        AssetManager.Register(helper);
         GrassManager.Register(helper);
+        AssetManager.Register(helper);
 
         helper.ConsoleCommands.Add(
             "gv-default_grass_weight",
