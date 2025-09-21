@@ -219,7 +219,8 @@ public static class GrassManager
                 {
                     if (varietyData.Id.StartsWith(grassStarterPrefix))
                     {
-                        varietyIds.Add(varietyData.Id);
+                        for (int i = 0; i < varietyData.Weight; i++)
+                            varietyIds.Add(varietyData.Id);
                     }
                 }
                 if (varietyIds.Count > 0)

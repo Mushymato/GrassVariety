@@ -1,0 +1,71 @@
+{
+  "$schema": "https://smapi.io/schemas/content-patcher.json",
+  "Changes": [
+    {
+      "Action": "Load",
+      "Target": "{{ModId}}/grass_lostisland",
+      "FromFile": "grass/{{TargetWithoutPath}}.png"
+    },
+    {
+      "Action": "EditData",
+      "Target": "mushymato.GrassVariety/Data",
+      "Entries": {
+        "{{ModId}}_lostisland": {
+          "Id": "{{ModId}}_lostisland",
+          "Texture": "{{ModId}}/grass_lostisland",
+          "Condition": null,
+          "Weight": 1,
+          "ByLocationAllowanceOnly": true,
+          "ApplyTo": [
+            "blueGrass"
+          ],
+          "OnCutTileActions": [
+            "mushymato.MMAP_If RANDOM 0.5 ## mushymato.MMAP_Critter Butterfly T 1"
+          ],
+          "OnCutItemSpawns": [
+            {
+              "Id": "{{ModId}}_SpawnMermaidScale",
+              "Condition": "RANDOM 0.1",
+              "RandomItemId": [
+                "(O){{ModId}}_PinkMermaidScale",
+                "(O){{ModId}}_SunsetMermaidScale"
+              ]
+            }
+          ]
+        },
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/LocationContexts",
+      "TargetField": [
+        "{{ModId}}_LostIslandPassOut",
+        "CustomFields"
+      ],
+      "Entries": {
+        "mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_lostisland"
+      }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Objects",
+      "Entries": {
+        "{{ModId}}_MermaidGrassStarter": {
+          "Name": "{{ModId}}_MermaidGrassStarter",
+          "DisplayName": "Mermaid Grass Starter",
+          "Description": "Mermaid Grass Starter",
+          "Type": "Crafting",
+          "Category": 0,
+          "Price": 50,
+          "Texture": null,
+          "SpriteIndex": 0,
+          "CustomFields": {
+            "mushymato.GrassVariety/GrassStarterKind": "blueGrass",
+            "mushymato.GrassVariety/GrassStarterVariety": "{{ModId}}_lostisland",
+            // "mushymato.GrassVariety/GrassStarterPlacementSound": "dirtyHit"
+          }
+        }
+      }
+    }
+  ]
+}

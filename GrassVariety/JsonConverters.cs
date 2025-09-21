@@ -138,21 +138,21 @@ public class GrassDestroyColorListConverter : JsonConverter
         {
             case JTokenType.String:
             case JTokenType.Array:
-                {
-                    GrassDestroyColor? clr = ToGrassDestroyColor(token);
-                    return new List<GrassDestroyColor?>() { clr, clr, clr, clr, clr, clr, clr };
-                }
+            {
+                GrassDestroyColor? clr = ToGrassDestroyColor(token);
+                return new List<GrassDestroyColor?>() { clr, clr, clr, clr, clr, clr, clr };
+            }
             case JTokenType.Object:
+            {
+                if (token.ToObject<Dictionary<string, JToken>>() is not Dictionary<string, JToken> tokenDict)
+                    return null;
+                List<GrassDestroyColor?> finalResult = [null, null, null, null, null, null, null];
+                foreach ((string key, JToken tok) in tokenDict)
                 {
-                    if (token.ToObject<Dictionary<string, JToken>>() is not Dictionary<string, JToken> tokenDict)
-                        return null;
-                    List<GrassDestroyColor?> finalResult = [null, null, null, null, null, null, null];
-                    foreach ((string key, JToken tok) in tokenDict)
-                    {
-                        finalResult[GrassIndexHelper.GetGrassIndexFromString(key) - 1] = ToGrassDestroyColor(tok);
-                    }
-                    return finalResult;
+                    finalResult[GrassIndexHelper.GetGrassIndexFromString(key) - 1] = ToGrassDestroyColor(tok);
                 }
+                return finalResult;
+            }
             default:
                 return null;
         }
