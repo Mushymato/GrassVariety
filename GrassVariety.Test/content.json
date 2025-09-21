@@ -78,6 +78,27 @@
       "Entries": {
         "mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_six"
       }
+    },
+    {
+      "Action": "EditData",
+      "Target": "Data/Objects",
+      "Entries": {
+        "{{ModId}}_GrassStarter": {
+          "Name": "{{ModId}}_GrassStarter",
+          "DisplayName": "Custom Grass Starter",
+          "Description": "Custom grass starter that always starts grass with specific kind and variant",
+          "Type": "Crafting",
+          "Category": 0,
+          "Price": 50,
+          "Texture": null,
+          "SpriteIndex": 0,
+          "CustomFields": {
+            "mushymato.GrassVariety/GrassStarterKind": "cobweb",
+            // "mushymato.GrassVariety/GrassStarterVariety": "{{ModId}}_three",
+            // "mushymato.GrassVariety/GrassStarterPlacementSound": "dirtyHit"
+          }
+        }
+      }
     }
   ]
 }

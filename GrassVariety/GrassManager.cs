@@ -9,7 +9,7 @@ using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Delegates;
 using StardewValley.Extensions;
-using StardewValley.GameData;
+using StardewValley.GameData.Objects;
 using StardewValley.Internal;
 using StardewValley.TerrainFeatures;
 
@@ -19,8 +19,14 @@ public static class GrassManager
 {
     internal const string LocationData_AllowedVarietyPrefix = $"{ModEntry.ModId}_AllowedVarietyPrefix";
     internal const string ModData_ChosenVariant = $"{ModEntry.ModId}_ChosenVariant";
+    internal const string ModData_ForcedVariant = $"{ModEntry.ModId}_ForcedVariant";
+    internal const string CustomFields_GrassStarterKind = $"{ModEntry.ModId}/GrassStarterKind";
+    internal const string CustomFields_GrassStarterVariety = $"{ModEntry.ModId}/GrassStarterVariety";
+    internal const string CustomFields_GrassStarterPlacementSound = $"{ModEntry.ModId}/GrassStarterPlacementSound";
 
     private static readonly FieldInfo Grass_whichWeed_Field = AccessTools.DeclaredField(typeof(Grass), "whichWeed");
+
+    private static Random GetTileRand(Vector2 xy) => Utility.CreateDaySaveRandom(xy.X * 1000, xy.Y * 2000);
 
     private static readonly PerScreen<List<GrassVarietyData>[]> grassVarietiesForCurrentLocation =
         new(AssetManager.InitGrassVarieties);
@@ -31,6 +37,26 @@ public static class GrassManager
         helper.Events.Player.Warped += OnWarped;
 
         Harmony harmony = new(ModEntry.ModId);
+
+        try
+        {
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.TryDropItemsOnCut)),
+                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_TryDropItemsOnCut_Postfix))
+            );
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(
+                    typeof(StardewValley.Object),
+                    nameof(StardewValley.Object.placementAction)
+                ),
+                prefix: new HarmonyMethod(typeof(GrassManager), nameof(SObject_placementAction_Prefix))
+            );
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log($"Failed to patch Grass (drop item):\n{ex}", LogLevel.Error);
+        }
+
         try
         {
             harmony.Patch(
@@ -41,14 +67,10 @@ public static class GrassManager
                 original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.textureName)),
                 postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_textureName_Postfix))
             );
-            harmony.Patch(
-                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.TryDropItemsOnCut)),
-                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_TryDropItemsOnCut_Postfix))
-            );
         }
         catch (Exception ex)
         {
-            ModEntry.Log($"Failed to patch GrassManager, some visuals may be incorrect.\n{ex}", LogLevel.Warn);
+            ModEntry.Log($"Failed to patch Grass (visuals), some visuals may be incorrect.\n{ex}", LogLevel.Warn);
         }
     }
 
@@ -87,6 +109,54 @@ public static class GrassManager
                 location.performAction(tileAction, who, loc);
             }
         }
+    }
+
+    private static bool SObject_placementAction_Prefix(
+        StardewValley.Object __instance,
+        GameLocation location,
+        int x,
+        int y,
+        ref bool __result
+    )
+    {
+        if (
+            Game1.objectData.TryGetValue(__instance.ItemId, out ObjectData? data)
+            && data.CustomFields is Dictionary<string, string> customFields
+            && customFields.TryGetValue(CustomFields_GrassStarterKind, out string? grassKindStr)
+            && GrassIndexHelper.GetGrassIndexFromString(grassKindStr) is byte grassKind
+        )
+        {
+            Vector2 tile = new(x / 64, y / 64);
+            if (location.objects.ContainsKey(tile) || location.terrainFeatures.ContainsKey(tile))
+            {
+                __result = false;
+                return false;
+            }
+            Grass grass = new(grassKind, 4);
+            if (
+                customFields.TryGetValue(CustomFields_GrassStarterVariety, out string? grassStarterPrefix)
+                && !string.IsNullOrEmpty(grassStarterPrefix)
+            )
+            {
+                List<string> varietyIds = [];
+                foreach (GrassVarietyData varietyData in AssetManager.GrassVarieties[grassKind - 1])
+                {
+                    if (varietyData.Id.StartsWith(grassStarterPrefix))
+                    {
+                        varietyIds.Add(varietyData.Id);
+                    }
+                }
+                if (varietyIds.Count > 0)
+                    grass.modData[ModData_ForcedVariant] = GetTileRand(tile).ChooseFrom(varietyIds);
+            }
+            location.terrainFeatures.Add(tile, grass);
+            if (!customFields.TryGetValue(CustomFields_GrassStarterPlacementSound, out string? placementSound))
+                placementSound = "dirtyHit";
+            location.playSound(placementSound);
+            __result = true;
+            return false;
+        }
+        return true;
     }
 
     private static bool Grass_createDestroySprites_Prefix(Grass __instance, GameLocation location, Vector2 tileLocation)
@@ -223,15 +293,26 @@ public static class GrassManager
             if (feature is not Grass grass)
                 continue;
 
-            ApplyGrassVariety(gvfcl, grass);
+            ChooseAndApplyGrassVariety(gvfcl, grass);
         }
 
         location.terrainFeatures.OnValueAdded += OnNewGrassAdded;
         location.terrainFeatures.OnValueTargetUpdated += OnGrassChanged;
     }
 
-    private static void ApplyGrassVariety(List<GrassVarietyData>[] gvfcl, Grass grass, bool newPlacement = false)
+    private static void ChooseAndApplyGrassVariety(
+        List<GrassVarietyData>[] gvfcl,
+        Grass grass,
+        bool newPlacement = false
+    )
     {
+        Random random = GetTileRand(grass.Tile);
+        if (TryGetForcedGrassVariety(grass, out GrassVarietyData? chosen))
+        {
+            ApplyGrassVariety(grass, newPlacement, chosen, random);
+            return;
+        }
+
         byte grassType = grass.grassType.Value;
         if (grassType < 1 || grassType > gvfcl.Length)
             return;
@@ -242,20 +323,18 @@ public static class GrassManager
             return;
         }
 
-        Random random = Utility.CreateDaySaveRandom(grass.Tile.X * 1000, grass.Tile.Y * 2000);
-
-        if (
-            newPlacement
-            || !TryGetChosenGrassVariety(grass, out GrassVarietyData? chosen)
-            || !grassList.Contains(chosen)
-        )
+        if (newPlacement || !TryGetChosenGrassVariety(grass, out chosen) || !grassList.Contains(chosen))
         {
             chosen = random.ChooseFrom(grassList);
         }
 
+        ApplyGrassVariety(grass, newPlacement, chosen, random);
+    }
+
+    private static void ApplyGrassVariety(Grass grass, bool newPlacement, GrassVarietyData chosen, Random random)
+    {
         if (chosen == null || chosen.Id == AssetManager.DEFAULT)
             return;
-
         grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
         if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
         {
@@ -271,12 +350,29 @@ public static class GrassManager
         grass.modData[ModData_ChosenVariant] = chosen.Id;
     }
 
+    private static bool TryGetForcedGrassVariety(Grass grass, [NotNullWhen(true)] out GrassVarietyData? chosen)
+    {
+        chosen = null;
+        if (
+            grass.modData.TryGetValue(ModData_ForcedVariant, out string chosenId)
+            && AssetManager.RawGrassVarieties.TryGetValue(chosenId, out chosen)
+            && (chosen.ApplyTo?.Contains(grass.grassType.Value) ?? false)
+        )
+        {
+            return chosen != null;
+        }
+        grass.modData.Remove(ModData_ForcedVariant);
+        grass.modData.Remove(ModData_ChosenVariant);
+        return false;
+    }
+
     private static bool TryGetChosenGrassVariety(Grass grass, [NotNullWhen(true)] out GrassVarietyData? chosen)
     {
         chosen = null;
         if (
             grass.modData.TryGetValue(ModData_ChosenVariant, out string chosenId)
             && AssetManager.RawGrassVarieties.TryGetValue(chosenId, out chosen)
+            && (chosen.ApplyTo?.Contains(grass.grassType.Value) ?? false)
         )
         {
             return chosen != null;
@@ -289,7 +385,7 @@ public static class GrassManager
     {
         if (value is Grass grass)
         {
-            ApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
+            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
         }
     }
 
@@ -297,7 +393,7 @@ public static class GrassManager
     {
         if (new_target_value is Grass grass)
         {
-            ApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass);
+            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass);
         }
     }
 }
