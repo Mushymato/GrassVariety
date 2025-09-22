@@ -410,8 +410,13 @@ public static class GrassManager
 
     private static void ApplyGrassVariety(Grass grass, bool newPlacement, GrassVarietyData chosen, Random random)
     {
-        if (chosen == null || chosen.Id == AssetManager.DEFAULT)
+        if (chosen == null)
             return;
+        if (chosen.Id == AssetManager.DEFAULT)
+        {
+            grass.modData[ModData_ChosenVariant] = chosen.Id;
+            return;
+        }
         grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
         if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
         {
