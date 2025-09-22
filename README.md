@@ -15,7 +15,7 @@ See [author-guilde.md](docs/author-guide.md).
 
 ### Config
 
-The `DefaultGrassWeight` config changes how frequently the vanilla grass texture (`TerrainFeatures/grass`) appear. The default is 0, but you may use this to allow some compatibility between this mod direct and content patcher grass retextures.
+The `DefaultGrassWeight` config changes how frequently the vanilla grass texture (`TerrainFeatures/grass`) appear. The default is 0, but you may use this to allow some compatibility between content packs using this mod and content packs that directly retextures the grass.
 
 At the moment it can be set via console command `gv-default_grass_weight [weight]` or by editing `config.json`, no GMCM support for now.
 
