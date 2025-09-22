@@ -412,11 +412,9 @@ public static class GrassManager
     {
         if (chosen == null)
             return;
+        grass.modData[ModData_ChosenVariant] = chosen.Id;
         if (chosen.Id == AssetManager.DEFAULT)
-        {
-            grass.modData[ModData_ChosenVariant] = chosen.Id;
             return;
-        }
         grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
         if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
         {
@@ -429,7 +427,6 @@ public static class GrassManager
             }
             Grass_whichWeed_Field.SetValue(grass, whichWeed);
         }
-        grass.modData[ModData_ChosenVariant] = chosen.Id;
     }
 
     private static bool TryGetForcedGrassVariety(Grass grass, [NotNullWhen(true)] out GrassVarietyData? chosen)
