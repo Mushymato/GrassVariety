@@ -14,12 +14,14 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
   "Target": "mushymato.GrassVariety/Data",
   "Entries": {
     "{{ModId}}_YourGrassVariety": {
-      /* Required Fields */
+      // =============== //
+      // Required Fields //
+      // =============== //
       // Id must be same as key, if they are different the key is taken as truth.
-      "Id": "{{ModId}}_YourGrassvarietyName",
+      "Id": "{{ModId}}_YourGrassVariety",
       // The texture must be loaded (via Load or InternalAssetKey)
       "Texture": "{{ModId}}/YourGrassTexture",
-      // Which grass this variety should apply to
+      // Which grass kind this variety should apply to
       "ApplyTo": [
         "springGrass",
         // "caveGrass"
@@ -29,12 +31,18 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
         // "cobweb"
         "blueGrass"
       ],
+      // =============== //
+      // Optional Fields //
+      // =============== //
       // Relative weight of this variety when there are multiple varieties able apply to this grass.
       "Weight": 1,
       // Game State Query to determine if this variety should apply
       "Condition": null,
+      // If this is true, exclude this variety from the standard pool
+      // This grass will only appear via the game location/location context mushymato.GrassVariety_AllowedVarietyPrefix custom field, or via a custom grass starter
+      "ByLocationAllowanceOnly": false,
       // The sub variants of this variety, if not specified the default is 0,1,2
-      // This can also be written as "{{Range:0,3}}" and [0, 1, 2, 3]
+      // This can also be written as "{{Range:0,3}}" or [0, 1, 2, 3]
       "SubVariants": "0,1,2,3",
       // Changes the color of the grass destroy animation
       "DestroyColors": {
@@ -63,9 +71,6 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
         // See https://stardewvalleywiki.com/Modding:Maps#Action
         "tile action string"
       ],
-      // If this is true, exclude this variety from the standard pool
-      // This grass will only appear randomly via the game location/location context custom field
-      "ByLocationAllowanceOnly": false,
     },
   }
 }
@@ -103,6 +108,20 @@ The row where you may put the grass is dependent on the kind. Even if you have a
 
 A single tile of grass is made of 4 different pieces of grass, and their sprites are randomly chosen from the row. In vanilla this is limited to the 3 textures, while Grass Variety allows each variety to determine which sprites from the row to use.
 
+## Location Filters
+
+You can make a location or location context by adding `"mushymato.GrassVariety_AllowedVarietyPrefix": "{{ModId}}_YourGrassVariety"` to CustomFields. This also works as a map property.
+
+This is called a prefix because it allows all grass varieties whose id starts with `{{ModId}}_YourGrassVariety`.
+
+If you had 3 varieties `{{ModId}}_YourGrassVarietyA`. `{{ModId}}_YourGrassVarietyB`, and `{{ModId}}_SomethingElse`:
+- `{{ModId}}_YourGrassVarietyA` `{{ModId}}_YourGrassVarietyB` would be allowed by prefix
+- `{{ModId}}_SomethingElse` would be banned by prefix
+
+A grass variety can be excluded from the default pool by `"ByLocationAllowanceOnly": true`. This means the variety will not appear unless:
+- It is a location that has an allowed variety prefix set, and it's Id begins with the allowed variety prefix.
+- It is planted with a custom grass starter, which ignores standard logic when checking for allow.
+
 ## Custom Grass Starters
 
 You can create a grass starter item that will plant the variety or varieties you specify. Adding grass this way ignores the normal location and condition checks but does respect weight. This works by adding an ordinary object and then filling out some extra CustomFields:
@@ -122,10 +141,11 @@ You can create a grass starter item that will plant the variety or varieties you
       "Texture": null,
       "SpriteIndex": 0,
       "CustomFields": {
-        // Which kind of grass this starter will plant
+        // Which kind of grass this starter will plant, required
         "mushymato.GrassVariety/GrassStarterKind": "blueGrass",
-        // What variety prefix to use 
+        // What variety prefix to use, optional
         "mushymato.GrassVariety/GrassStarterVariety": "{{ModId}}_YourGrassVariety",
+        // Sound of grass planting, optional
         "mushymato.GrassVariety/GrassStarterPlacementSound": "dirtyHit"
       }
     }
