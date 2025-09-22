@@ -21,4 +21,4 @@ At the moment it can be set via console command `gv-default_grass_weight [weight
 
 ## Compatiblity
 
-This mod is not compatible with [More Grass](https://www.nexusmods.com/stardewvalley/mods/5398) which patches draw directly and takes effect over this mod completely. There are no plans to introduce compatibility due to feature overlap and this mod functions very differently than More Grass.
+This mod is not compatible with [More Grass](https://www.nexusmods.com/stardewvalley/mods/5398) which patches draw directly and takes effect over this mod completely. There are no plans to introduce compatibility due to feature overlap and conflicting design choices.
