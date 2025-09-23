@@ -420,13 +420,13 @@ public static class GrassManager
         if (chosen == null)
         {
             chosen = random.ChooseFrom(grassList);
-            if (chosen.PersistPeriod <= -1)
+            if (chosen.PersistDays == -1)
             {
                 grass.modData[ModData_NextRecheck] = "-1";
             }
-            else
+            else if (chosen.PersistDays > 0)
             {
-                grass.modData[ModData_NextRecheck] = (Game1.Date.TotalDays + chosen.PersistPeriod).ToString();
+                grass.modData[ModData_NextRecheck] = (Game1.Date.TotalDays + chosen.PersistDays).ToString();
             }
         }
         ApplyGrassVariety(grass, newPlacement, chosen, random);

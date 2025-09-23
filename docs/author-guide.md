@@ -41,6 +41,11 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
       // If this is true, exclude this variety from the standard pool
       // This grass will only appear via the game location/location context mushymato.GrassVariety_AllowedVarietyPrefix custom field, or via a custom grass starter
       "ByLocationAllowanceOnly": false,
+      // Number of days this grass will remain at a particular variaty before it is allowed to reroll to another variety
+      // Special values:
+      // -1 remains forever
+      // 0 does not persist not even on the same day
+      "PersistDays": 1,
       // The sub variants of this variety, if not specified the default is 0,1,2
       // This can also be written as "{{Range:0,3}}" or [0, 1, 2, 3]
       "SubVariants": "0,1,2,3",
@@ -124,7 +129,12 @@ A grass variety can be excluded from the default pool by `"ByLocationAllowanceOn
 
 ## Custom Grass Starters
 
-You can create a grass starter item that will plant the variety or varieties you specify. Adding grass this way ignores the normal location and condition checks but does respect weight. This works by adding an ordinary object and then filling out some extra CustomFields:
+You can create a grass starter item that will plant the variety or varieties you specify.
+
+Grass added by a custom starter that defines specific starter variety is consider "forced", which means that:
+- It ignores the normal location and condition checks when planting
+- It does still respect weight when picking variety for the first time
+- It will never reroll into another grass variety
 
 ```js
 {

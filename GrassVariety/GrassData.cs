@@ -100,7 +100,7 @@ public sealed class GrassVarietyData
 
     public int Weight { get; set; } = 1;
 
-    public int PersistPeriod { get; set; } = 1;
+    public int PersistDays { get; set; } = 1;
 
     [JsonConverter(typeof(StringIntListConverter))]
     public List<int>? SubVariants { get; set; } = null;
