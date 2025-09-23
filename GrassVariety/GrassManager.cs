@@ -21,6 +21,7 @@ public static class GrassManager
     internal const string LocationData_AllowedVarietyPrefix = $"{ModEntry.ModId}_AllowedVarietyPrefix";
     internal const string ModData_ChosenVariant = $"{ModEntry.ModId}_ChosenVariant";
     internal const string ModData_ForcedVariant = $"{ModEntry.ModId}_ForcedVariant";
+    internal const string ModData_NextRecheck = $"{ModEntry.ModId}_NextRecheck";
     internal const string CustomFields_GrassStarterKind = $"{ModEntry.ModId}/GrassStarterKind";
     internal const string CustomFields_GrassStarterVariety = $"{ModEntry.ModId}/GrassStarterVariety";
     internal const string CustomFields_GrassStarterPlacementSound = $"{ModEntry.ModId}/GrassStarterPlacementSound";
@@ -159,6 +160,7 @@ public static class GrassManager
         Vector2 tile = __instance.Tile;
         GameLocation location = __instance.Location;
         Farmer who = tool.getLastFarmerToUse() ?? Game1.player;
+        bool isScythe = tool.isScythe();
         if (chosen.OnCutItemSpawns != null)
         {
             GameStateQueryContext gqCtx = new(location, who, null, tool, null);
@@ -166,7 +168,7 @@ public static class GrassManager
             Vector2 tilePos = __instance.Tile * Game1.tileSize;
             foreach (GrassOnCutItemSpawnData iq in chosen.OnCutItemSpawns)
             {
-                if (!GameStateQuery.CheckConditions(iq.Condition, gqCtx))
+                if ((iq.RequiresScythe && !isScythe) || !GameStateQuery.CheckConditions(iq.Condition, gqCtx))
                     continue;
                 foreach (ItemQueryResult spawned in ItemQueryResolver.TryResolve(iq, iqCtx, iq.SearchMode))
                 {
@@ -329,7 +331,7 @@ public static class GrassManager
         }
         if (allowedVarietyPrefix != null)
         {
-            ModEntry.Log($"Grass allowed variety prefix: {allowedVarietyPrefix}");
+            ModEntry.Log($"Grass allowed variety prefix for {location.NameOrUniqueName}: '{allowedVarietyPrefix}'");
         }
 
         byte grassType = 1;
@@ -359,8 +361,8 @@ public static class GrassManager
                 }
             }
             if (grassList.Count > 0)
-                ModEntry.Log(
-                    $"Got {grassList.Count} varieties for grass type {grassType} in {location.NameOrUniqueName}"
+                ModEntry.LogOnce(
+                    $"{grassList.Count} varieties for grass type {grassType} in {location.NameOrUniqueName}"
                 );
             grassType++;
         }
@@ -400,11 +402,33 @@ public static class GrassManager
             return;
         }
 
-        if (newPlacement || !TryGetChosenGrassVariety(grass, out chosen) || !grassList.Contains(chosen))
+        if (!newPlacement)
         {
-            chosen = random.ChooseFrom(grassList);
+            if (
+                !grass.modData.TryGetValue(ModData_NextRecheck, out string? nextRecheckDayStr)
+                || (int.TryParse(nextRecheckDayStr, out int nextRecheckDay) && Game1.Date.TotalDays >= nextRecheckDay)
+            )
+            {
+                grass.modData.Remove(ModData_ChosenVariant);
+            }
+            else if (TryGetChosenGrassVariety(grass, out chosen) && !grassList.Contains(chosen))
+            {
+                chosen = null;
+            }
         }
 
+        if (chosen == null)
+        {
+            chosen = random.ChooseFrom(grassList);
+            if (chosen.PersistPeriod <= -1)
+            {
+                grass.modData[ModData_NextRecheck] = "-1";
+            }
+            else
+            {
+                grass.modData[ModData_NextRecheck] = (Game1.Date.TotalDays + chosen.PersistPeriod).ToString();
+            }
+        }
         ApplyGrassVariety(grass, newPlacement, chosen, random);
     }
 
@@ -441,7 +465,6 @@ public static class GrassManager
             return chosen != null;
         }
         grass.modData.Remove(ModData_ForcedVariant);
-        grass.modData.Remove(ModData_ChosenVariant);
         return false;
     }
 

@@ -84,7 +84,8 @@ public sealed record GrassDestroyColor(Color ClrSpring, Color ClrSummer, Color C
 
 public sealed class GrassOnCutItemSpawnData : GenericSpawnItemDataWithCondition
 {
-    public ItemQuerySearchMode SearchMode;
+    public ItemQuerySearchMode SearchMode { get; set; } = ItemQuerySearchMode.AllOfTypeItem;
+    public bool RequiresScythe { get; set; } = false;
 }
 
 public sealed class GrassVarietyData
@@ -98,6 +99,8 @@ public sealed class GrassVarietyData
     public bool ByLocationAllowanceOnly { get; set; } = false;
 
     public int Weight { get; set; } = 1;
+
+    public int PersistPeriod { get; set; } = 1;
 
     [JsonConverter(typeof(StringIntListConverter))]
     public List<int>? SubVariants { get; set; } = null;
