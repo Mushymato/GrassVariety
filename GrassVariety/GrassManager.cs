@@ -159,8 +159,8 @@ public static class GrassManager
             return;
         Vector2 tile = __instance.Tile;
         GameLocation location = __instance.Location;
-        Farmer who = tool.getLastFarmerToUse() ?? Game1.player;
-        bool isScythe = tool.isScythe();
+        Farmer who = tool?.getLastFarmerToUse() ?? Game1.player;
+        bool isScythe = tool?.isScythe() ?? false;
         if (chosen.OnCutItemSpawns != null)
         {
             GameStateQueryContext gqCtx = new(location, who, null, tool, null);

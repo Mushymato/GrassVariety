@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - DEFAULT variant not saving the chosen variety properly
+- Bomb related NRE
 
 ## [1.0.0] - 2025-09-21
 
