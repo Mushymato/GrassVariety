@@ -69,6 +69,9 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
       "OnCutItemSpawns": [
         {
           // item spawn field with Condition, see https://stardewvalleywiki.com/Modding:Item_queries
+          // Also accepts these extra fields
+          // "SearchMode": one of "AllOfTypeItem", "FirstOfTypeItem", "RandomOfTypeItem", default "AllOfTypeItem"
+          // "RequiresScythe": whether this drop only happens on scythe, default false
         }
       ],
       // List of tile actions to run after this grass is cut, these are same you put on Buildings layer Action tile property
