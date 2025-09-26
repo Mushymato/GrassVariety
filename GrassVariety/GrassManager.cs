@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
-using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Delegates;
 using StardewValley.Extensions;
@@ -18,7 +18,6 @@ namespace GrassVariety;
 
 public static class GrassManager
 {
-    internal const string LocationData_AllowedVarietyPrefix = $"{ModEntry.ModId}_AllowedVarietyPrefix";
     internal const string ModData_ChosenVariant = $"{ModEntry.ModId}_ChosenVariant";
     internal const string ModData_ForcedVariant = $"{ModEntry.ModId}_ForcedVariant";
     internal const string ModData_NextRecheck = $"{ModEntry.ModId}_NextRecheck";
@@ -30,12 +29,12 @@ public static class GrassManager
 
     private static Random GetTileRand(Vector2 xy) => Utility.CreateDaySaveRandom(xy.X * 1000, xy.Y * 2000);
 
-    private static readonly PerScreen<List<GrassVarietyData>[]> grassVarietiesForCurrentLocation =
-        new(AssetManager.InitGrassVarieties);
+    private static readonly ConditionalWeakTable<GameLocation, LocationGrassWatcher?> grassWatchers = [];
 
     internal static void Register(IModHelper helper)
     {
-        helper.Events.GameLoop.DayStarted += OnDayStarted;
+        helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
+        helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
         helper.Events.Player.Warped += OnWarped;
 
         Harmony harmony = new(ModEntry.ModId);
@@ -89,6 +88,29 @@ public static class GrassManager
                 LogLevel.Warn
             );
         }
+    }
+
+    private static void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+    {
+        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
+    }
+
+    private static void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
+    {
+        foreach ((_, LocationGrassWatcher? watcher) in grassWatchers)
+        {
+            watcher?.Deactivate();
+        }
+        grassWatchers.Clear();
+    }
+
+    private static void OnWarped(object? sender, WarpedEventArgs e)
+    {
+        if (grassWatchers.TryGetValue(e.OldLocation, out LocationGrassWatcher? oldWatcher))
+        {
+            oldWatcher?.Deactivate();
+        }
+        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
     }
 
     private static Grass ModifySpreadGrass(Grass newGrass, Grass sourceGrass)
@@ -276,110 +298,7 @@ public static class GrassManager
         }
     }
 
-    private static void OnWarped(object? sender, WarpedEventArgs e)
-    {
-        if (e.OldLocation != null)
-        {
-            e.OldLocation.terrainFeatures.OnValueAdded -= OnNewGrassAdded;
-            e.OldLocation.terrainFeatures.OnValueTargetUpdated -= OnGrassChanged;
-        }
-        SetupGrassVarietyForLocation(e.NewLocation);
-    }
-
-    private static void OnDayStarted(object? sender, DayStartedEventArgs e)
-    {
-        SetupGrassVarietyForLocation(Game1.currentLocation);
-    }
-
-    internal static bool TryGetLocationalProperty(
-        GameLocation location,
-        string propKey,
-        [NotNullWhen(true)] out string? prop
-    )
-    {
-        prop = null;
-        if (location == null)
-            return false;
-        if (location.GetData()?.CustomFields?.TryGetValue(propKey, out prop) ?? false)
-        {
-            return !string.IsNullOrWhiteSpace(prop);
-        }
-        if (location.Map != null && location.Map.Properties != null && location.TryGetMapProperty(propKey, out prop))
-        {
-            return !string.IsNullOrWhiteSpace(prop);
-        }
-        if (location.GetLocationContext()?.CustomFields?.TryGetValue(propKey, out prop) ?? false)
-        {
-            return !string.IsNullOrWhiteSpace(prop);
-        }
-        return false;
-    }
-
-    private static void SetupGrassVarietyForLocation(GameLocation location)
-    {
-        if (location == null || location.map == null)
-        {
-            return;
-        }
-
-        List<GrassVarietyData>[] gvfcl = grassVarietiesForCurrentLocation.Value;
-        gvfcl.ClearGrassVarieties();
-
-        if (!TryGetLocationalProperty(location, LocationData_AllowedVarietyPrefix, out string? allowedVarietyPrefix))
-        {
-            allowedVarietyPrefix = null;
-        }
-        if (allowedVarietyPrefix != null)
-        {
-            ModEntry.Log($"Grass allowed variety prefix for {location.NameOrUniqueName}: '{allowedVarietyPrefix}'");
-        }
-
-        byte grassType = 1;
-        GameStateQueryContext ctx = new(location, Game1.player, null, null, null);
-        foreach (List<GrassVarietyData> varieties in AssetManager.GrassVarieties)
-        {
-            List<GrassVarietyData> grassList = gvfcl[grassType - 1];
-            foreach (GrassVarietyData variety in varieties)
-            {
-                if (allowedVarietyPrefix == null)
-                {
-                    if (variety.ByLocationAllowanceOnly)
-                        continue;
-                }
-                else
-                {
-                    if (!variety.Id.StartsWith(allowedVarietyPrefix))
-                        continue;
-                }
-
-                if (GameStateQuery.CheckConditions(variety.Condition, ctx))
-                {
-                    for (int i = 0; i < variety.Weight; i++)
-                    {
-                        grassList.Add(variety);
-                    }
-                }
-            }
-            if (grassList.Count > 0)
-                ModEntry.LogOnce(
-                    $"{grassList.Count} varieties for grass type {grassType} in {location.NameOrUniqueName}"
-                );
-            grassType++;
-        }
-
-        foreach (TerrainFeature feature in location.terrainFeatures.Values)
-        {
-            if (feature is not Grass grass)
-                continue;
-
-            ChooseAndApplyGrassVariety(gvfcl, grass);
-        }
-
-        location.terrainFeatures.OnValueAdded += OnNewGrassAdded;
-        location.terrainFeatures.OnValueTargetUpdated += OnGrassChanged;
-    }
-
-    private static void ChooseAndApplyGrassVariety(
+    internal static void ChooseAndApplyGrassVariety(
         List<GrassVarietyData>[] gvfcl,
         Grass grass,
         bool newPlacement = false
@@ -481,29 +400,5 @@ public static class GrassManager
         }
         grass.modData.Remove(ModData_ChosenVariant);
         return false;
-    }
-
-    private static void OnNewGrassAdded(Vector2 key, TerrainFeature value)
-    {
-        if (value is Grass grass)
-        {
-            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
-        }
-    }
-
-    private static void OnNewGrassAddedBySpread(Vector2 key, TerrainFeature value)
-    {
-        if (value is Grass grass)
-        {
-            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass, newPlacement: true);
-        }
-    }
-
-    private static void OnGrassChanged(Vector2 key, TerrainFeature old_target_value, TerrainFeature new_target_value)
-    {
-        if (new_target_value is Grass grass)
-        {
-            ChooseAndApplyGrassVariety(grassVarietiesForCurrentLocation.Value, grass);
-        }
     }
 }

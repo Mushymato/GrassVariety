@@ -90,9 +90,9 @@ public sealed class GrassOnCutItemSpawnData : GenericSpawnItemDataWithCondition
 
 public sealed class GrassVarietyData
 {
-    public string Id { get; set; } = null!;
+    public string Id { get; set; } = AssetManager.DEFAULT;
 
-    public string Texture { get; set; } = null!;
+    public string Texture { get; set; } = AssetManager.DefaultGrassTexture;
 
     public string? Condition { get; set; } = null;
 
@@ -111,6 +111,8 @@ public sealed class GrassVarietyData
     [JsonConverter(typeof(GrassDestroyColorListConverter))]
     public List<GrassDestroyColor?>? DestroyColors { get; set; } = null;
 
+    public string? InheritOnCutFrom { get; set; } = AssetManager.DEFAULT;
+
     public List<GrassOnCutItemSpawnData>? OnCutItemSpawns { get; set; } = null;
 
     public List<string>? OnCutTileActions { get; set; } = null;
@@ -122,7 +124,7 @@ public static class AssetManager
 {
     internal const string Asset_GrassVariety = $"{ModEntry.ModId}/Data";
     internal const string DEFAULT = "DEFAULT";
-    private const string DefaultGrassTexture = "TerrainFeatures\\grass";
+    internal const string DefaultGrassTexture = "TerrainFeatures\\grass";
 
     internal static List<GrassVarietyData>[] InitGrassVarieties() =>
         [
@@ -166,6 +168,15 @@ public static class AssetManager
                 {
                     variety.ApplyTo = [Grass.springGrass];
                 }
+                if (
+                    variety.InheritOnCutFrom != null
+                    && RawGrassVarieties.TryGetValue(variety.InheritOnCutFrom, out GrassVarietyData? inheritFrom)
+                    && inheritFrom.InheritOnCutFrom == null
+                )
+                {
+                    variety.OnCutItemSpawns ??= inheritFrom.OnCutItemSpawns;
+                    variety.OnCutTileActions ??= inheritFrom.OnCutTileActions;
+                }
                 foreach (byte apply in variety.ApplyTo)
                 {
                     if (apply >= 1 && apply <= grassVarieties.Length)
@@ -203,6 +214,7 @@ public static class AssetManager
                 Id = DEFAULT,
                 Texture = DefaultGrassTexture,
                 Weight = ModEntry.Config.DefaultGrassWeight,
+                InheritOnCutFrom = null,
                 ApplyTo =
                 [
                     Grass.springGrass,
