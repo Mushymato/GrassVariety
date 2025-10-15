@@ -110,7 +110,7 @@ public static class GrassManager
         {
             oldWatcher?.Deactivate();
         }
-        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
+        grassWatchers.GetValue(e.NewLocation, LocationGrassWatcher.Create)?.Activate();
     }
 
     private static Grass ModifySpreadGrass(Grass newGrass, Grass sourceGrass)
