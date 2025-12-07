@@ -1,6 +1,0 @@
-{
-  "config.DefaultGrassWeight.name": "Default Grass Weight",
-  "config.DefaultGrassWeight.desc": "The weight value of base game grass, affects how frequently they appear. Default 0 (never).",
-  "config.MoreGrassShimWeight.name": "More Grass Shim Weight",
-  "config.MoreGrassShimWeight.desc": "The weight value of grass loaded from More Grass, affects how frequently they appear. Default 3.",
-}

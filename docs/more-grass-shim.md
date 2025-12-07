@@ -6,6 +6,7 @@
 Grass Variety has the ability to utilize content packs created for More Grass, with these limitations:
 1. Nothing specific to the `content.json` of More Grass content pack is supported, that means no location blacklist/whitelist settings.
 2. The player facing config options of More Grass don't exist in Grass Variety, because Grass Variety gives this power to content packs instead.
+3. There's no way to dynamically change settings for More Grass packs loaded this way.
 
 ## manifest.json
 
@@ -35,10 +36,11 @@ Example manifest.json from [Wildflower Grass Field](https://www.nexusmods.com/st
   },
 
   // Optional fields:
-  // By default, More Grass packs are converted for regular grass (springGrass) only and does not apply to blue grass (blueGrass)
+  // By default, More Grass packs are converted only for regular grass (springGrass) and does not apply to blue grass (blueGrass)
   // This can be changed via these extra manifest fields:
   "mushymato.GrassVariety/IsGreenGrass": true, // true will make this pack valid for green grass (default true)
   "mushymato.GrassVariety/IsBlueGrass": false, // true will make this pack valid for blue grass (default false)
+  "mushymato.GrassVariety/Weight": 1, // changes how often this grass appears relative to all other grass
 }
 ```
 

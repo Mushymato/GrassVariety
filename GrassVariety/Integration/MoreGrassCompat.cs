@@ -15,13 +15,18 @@ internal sealed class MoreGrassPackContext(
 {
     private static bool GetFlagFromManifest(IContentPack contentPack, string key, bool defaultValue)
     {
-        if (
-            contentPack.Manifest.ExtraFields.TryGetValue(key, out object? isBoolV)
-            && isBoolV != null
-            && isBoolV is bool?
-        )
+        if (contentPack.Manifest.ExtraFields.TryGetValue(key, out object? isBoolV) && isBoolV is bool v)
         {
-            return (bool)isBoolV;
+            return v;
+        }
+        return defaultValue;
+    }
+
+    private static long GetIntFromManifest(IContentPack contentPack, string key, int defaultValue)
+    {
+        if (contentPack.Manifest.ExtraFields.TryGetValue(key, out object? intVal) && intVal is long v)
+        {
+            return v;
         }
         return defaultValue;
     }
@@ -30,6 +35,7 @@ internal sealed class MoreGrassPackContext(
     {
         bool isGreenGrass = GetFlagFromManifest(contentPack, $"{ModEntry.ModId}/IsGreenGrass", true);
         bool isBlueGrass = GetFlagFromManifest(contentPack, $"{ModEntry.ModId}/IsBlueGrass", false);
+        long weight = GetIntFromManifest(contentPack, $"{ModEntry.ModId}/Weight", 1);
         if (!isGreenGrass && !isBlueGrass)
             return null;
 
@@ -127,7 +133,7 @@ internal sealed class MoreGrassPackContext(
         {
             Id = $"{ModEntry.ModId}@{contentPack.Manifest.UniqueID}@MoreGrassShim",
             Texture = $"{ModEntry.ModId}/{contentPack.Manifest.UniqueID}/MoreGrassSheet",
-            Weight = ModEntry.Config.MoreGrassShimWeight,
+            Weight = (int)weight,
             SubVariants = Enumerable.Range(0, count).ToList(),
             ApplyTo = [],
         };
