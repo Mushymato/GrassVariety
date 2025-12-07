@@ -25,8 +25,6 @@ public static class GrassManager
     internal const string CustomFields_GrassStarterVariety = $"{ModEntry.ModId}/GrassStarterVariety";
     internal const string CustomFields_GrassStarterPlacementSound = $"{ModEntry.ModId}/GrassStarterPlacementSound";
 
-    private static readonly FieldInfo Grass_whichWeed_Field = AccessTools.DeclaredField(typeof(Grass), "whichWeed");
-
     private static Random GetTileRand(Vector2 xy) => Utility.CreateDaySaveRandom(xy.X * 1000, xy.Y * 2000);
 
     private static readonly ConditionalWeakTable<GameLocation, LocationGrassWatcher?> grassWatchers = [];
@@ -51,6 +49,10 @@ public static class GrassManager
             harmony.Patch(
                 original: AccessTools.DeclaredMethod(typeof(GameLocation), nameof(GameLocation.growWeedGrass)),
                 transpiler: new HarmonyMethod(typeof(GrassManager), nameof(GameLocation_growWeedGrass_Transpiler))
+            );
+            harmony.Patch(
+                original: AccessTools.DeclaredMethod(typeof(Grass), nameof(Grass.setUpRandom)),
+                postfix: new HarmonyMethod(typeof(GrassManager), nameof(Grass_setUpRandom_Postfix))
             );
         }
         catch (Exception ex)
@@ -122,6 +124,21 @@ public static class GrassManager
         return newGrass;
     }
 
+    private static void Grass_setUpRandom_Postfix(Grass __instance, ref int[] ___whichWeed)
+    {
+        if (!TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen))
+            return;
+        if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
+        {
+            ModEntry.Log($"{__instance.Tile}: {chosen.Id} {chosen.SubVariants} {__instance.texture.Value.Name}");
+            Random random = GetTileRand(__instance.Tile);
+            for (int i = 0; i < 4; i++)
+            {
+                ___whichWeed[i] = random.ChooseFrom(chosen.SubVariants);
+            }
+        }
+    }
+
     private static IEnumerable<CodeInstruction> GameLocation_growWeedGrass_Transpiler(
         IEnumerable<CodeInstruction> instructions,
         ILGenerator generator
@@ -157,12 +174,10 @@ public static class GrassManager
                 .ThrowIfNotMatch("Failed to find 'new Grass(grass.grassType.Value, Game1.random.Next(1, 3))'");
             CodeInstruction sourceGrassLoc = new(matcher.Opcode, matcher.Operand);
             matcher.Advance(toMatchFor.Length);
-            matcher.Insert(
-                [
-                    sourceGrassLoc,
-                    new(OpCodes.Call, AccessTools.DeclaredMethod(typeof(GrassManager), nameof(ModifySpreadGrass))),
-                ]
-            );
+            matcher.Insert([
+                sourceGrassLoc,
+                new(OpCodes.Call, AccessTools.DeclaredMethod(typeof(GrassManager), nameof(ModifySpreadGrass))),
+            ]);
 
             return matcher.Instructions();
         }
@@ -359,17 +374,7 @@ public static class GrassManager
         if (chosen.Id == AssetManager.DEFAULT)
             return;
         grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
-        if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
-        {
-            if (newPlacement)
-                grass.setUpRandom();
-            int[] whichWeed = new int[4];
-            for (int i = 0; i < 4; i++)
-            {
-                whichWeed[i] = random.ChooseFrom(chosen.SubVariants);
-            }
-            Grass_whichWeed_Field.SetValue(grass, whichWeed);
-        }
+        grass.setUpRandom();
     }
 
     private static bool TryGetForcedGrassVariety(Grass grass, [NotNullWhen(true)] out GrassVarietyData? chosen)

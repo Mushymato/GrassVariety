@@ -143,6 +143,7 @@ public static class AssetManager
         {
             grassList.Clear();
         }
+        grassVarietiesLoaded = false;
     }
 
     private static Dictionary<string, GrassVarietyData>? rawGrassVarieties = null;
@@ -150,11 +151,12 @@ public static class AssetManager
         rawGrassVarieties ??= Game1.content.Load<Dictionary<string, GrassVarietyData>>(Asset_GrassVariety);
     private static readonly List<GrassVarietyData>[] grassVarieties = InitGrassVarieties();
 
+    private static bool grassVarietiesLoaded = false;
     internal static List<GrassVarietyData>[] GrassVarieties
     {
         get
         {
-            if (rawGrassVarieties != null)
+            if (rawGrassVarieties != null && grassVarietiesLoaded)
             {
                 return grassVarieties;
             }
@@ -188,7 +190,7 @@ public static class AssetManager
                         );
                 }
             }
-
+            grassVarietiesLoaded = true;
             return grassVarieties;
         }
     }

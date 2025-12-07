@@ -1,0 +1,6 @@
+{
+  "config.DefaultGrassWeight.name": "默认草权重",
+  "config.DefaultGrassWeight.desc": "原版游戏草的权重值，影响出现的频率。默认 0（从不出现）。",
+  "config.MoreGrassShimWeight.name": "More Grass兼容草权重",
+  "config.MoreGrassShimWeight.desc": "用Grass Variety加载的More Grass草的权重值，影响出现的频率。默认 3。",
+}

@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(MSBuildUserExtensionsPath)/sdv.props"
-    Condition="Exists('$(MSBuildUserExtensionsPath)/sdv.props')" />
+  <Import
+    Project="$(MSBuildUserExtensionsPath)/sdv.props"
+    Condition="Exists('$(MSBuildUserExtensionsPath)/sdv.props')"
+  />
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -16,7 +18,7 @@
     <Description>Add skins to grass.</Description>
     <UniqueId>mushymato.GrassVariety</UniqueId>
     <UpdateKeys>Nexus:36458</UpdateKeys>
-    <Version>1.1.2</Version>
+    <Version>1.2.0</Version>
     <MinimumApiVersion_Behavior>UpdateFull</MinimumApiVersion_Behavior>
     <MinimumGameVersion_Behavior>UpdateFull</MinimumGameVersion_Behavior>
     <Dependencies_VersionBehavior>UpdateFull</Dependencies_VersionBehavior>
@@ -32,5 +34,4 @@
     <PackageReference Include="Leclair.Stardew.ModManifestBuilder" Version="2.4.1" />
     <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.4.0" />
   </ItemGroup>
-
 </Project>
