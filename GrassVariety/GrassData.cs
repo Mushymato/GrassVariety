@@ -119,11 +119,11 @@ public sealed class GrassVarietyData
 
     public bool EnableAtlasOptimization { get; set; } = true;
 
-    internal int BaseSubVariantIndex { get; set; } = -1;
-    internal int MergedSheetIndex { get; set; } = -1;
+    internal Point CompSheetCoord { get; set; } = Point.Zero;
+    internal int MergedSheetNum { get; set; } = -1;
 
     internal Texture2D LoadTexture() =>
-        EnableAtlasOptimization ? GrassComp.LoadTexture(MergedSheetIndex) : Game1.content.Load<Texture2D>(Texture);
+        EnableAtlasOptimization ? GrassComp.LoadTexture(MergedSheetNum) : Game1.content.Load<Texture2D>(Texture);
 }
 
 public static class AssetManager
@@ -142,15 +142,6 @@ public static class AssetManager
             [], // Grass.cobweb
             [], // Grass.blueGrass
         ];
-
-    internal static void ClearGrassVarieties(this List<GrassVarietyData>[] grassVarietiesArray)
-    {
-        foreach (List<GrassVarietyData> grassList in grassVarietiesArray)
-        {
-            grassList.Clear();
-        }
-        grassVarietiesLoaded = false;
-    }
 
     private static Dictionary<string, GrassVarietyData>? rawGrassVarieties = null;
     internal static Dictionary<string, GrassVarietyData> RawGrassVarieties =>
@@ -196,10 +187,10 @@ public static class AssetManager
                         );
                 }
             }
+            grassVarietiesLoaded = true;
 
             GrassComp.RecalculateSpriteSheet();
 
-            grassVarietiesLoaded = true;
             return grassVarieties;
         }
     }
@@ -245,7 +236,11 @@ public static class AssetManager
         if (e.NamesWithoutLocale.Any(name => name.IsEquivalentTo(Asset_GrassVariety)))
         {
             rawGrassVarieties = null;
-            grassVarieties.ClearGrassVarieties();
+            grassVarietiesLoaded = false;
+            foreach (List<GrassVarietyData> grassList in grassVarieties)
+            {
+                grassList.Clear();
+            }
             GrassComp.InvalidateData();
         }
         else

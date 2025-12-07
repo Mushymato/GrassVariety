@@ -50,7 +50,6 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
     {
         if (IsActive)
             return;
-        grassVarietiesForLocation.ClearGrassVarieties();
         if (!TryGetLocationalProperty(location, LocationData_AllowedVarietyPrefix, out string? allowedVarietyPrefix))
         {
             allowedVarietyPrefix = null;
@@ -65,6 +64,7 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
         foreach (List<GrassVarietyData> varieties in AssetManager.GrassVarieties)
         {
             List<GrassVarietyData> grassList = grassVarietiesForLocation[grassType - 1];
+            grassList.Clear();
             foreach (GrassVarietyData variety in varieties)
             {
                 if (allowedVarietyPrefix == null)
@@ -97,7 +97,6 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
         {
             if (feature is not Grass grass)
                 continue;
-
             GrassManager.ChooseAndApplyGrassVariety(grassVarietiesForLocation, grass);
         }
 
@@ -110,6 +109,12 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
     {
         if (!IsActive)
             return;
+        foreach (TerrainFeature feature in location.terrainFeatures.Values)
+        {
+            if (feature is not Grass grass)
+                continue;
+            grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
+        }
         location.terrainFeatures.OnValueAdded -= OnNewGrassAdded;
         location.terrainFeatures.OnValueTargetUpdated -= OnGrassChanged;
         IsActive = false;

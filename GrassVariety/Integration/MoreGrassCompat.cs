@@ -7,60 +7,6 @@ using StardewValley.TerrainFeatures;
 
 namespace GrassVariety.Integration;
 
-#region MoreGrass.Config.ContentPackConfig
-/*
-MIT License
-
-Copyright (c) 2019 EpicBellyFlop45
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
-/// <summary>More Grass content pack configuration.</summary>
-public sealed class ContentPackConfig
-{
-    /*********
-    ** Properties
-    *********/
-    /// <summary>Whether default grass sprites should be drawn too.</summary>
-    /// <remarks>GrassVariety: Ignored</remarks>
-    public bool EnableDefaultGrass { get; set; } = true;
-
-    /// <summary>The locations that each specified grass is allowed to be in.</summary>
-    /// <remarks>GrassVariety: Transform to condition</remarks>
-    public Dictionary<string, List<string>> WhiteListedGrass { get; set; } = [];
-
-    /// <summary>The locations that each specified grass isn't allowed to be in.</summary>
-    /// <remarks>GrassVariety: Transform to condition</remarks>
-    public Dictionary<string, List<string>> BlackListedGrass { get; set; } = [];
-
-    /// <summary>The locations that this pack is allowed to retexture grass in.</summary>
-    /// <remarks>GrassVariety: Transform to condition</remarks>
-    public List<string> WhiteListedLocations { get; set; } = [];
-
-    /// <summary>The locations that this pack isn't allowed to retexture grass is.</summary>
-    /// <remarks>GrassVariety: Transform to condition</remarks>
-    public List<string> BlackListedLocations { get; set; } = [];
-}
-
-#endregion
-
 internal sealed class MoreGrassPackContext(
     IContentPack contentPack,
     Texture2D spriteSheet,
@@ -69,6 +15,15 @@ internal sealed class MoreGrassPackContext(
 {
     internal static MoreGrassPackContext? Make(IContentPack contentPack)
     {
+        bool isBlueGrass = false;
+        if (
+            contentPack.Manifest.ExtraFields.TryGetValue($"{ModEntry.ModId}/IsBlueGrass", out object? isBlueGrassV)
+            && isBlueGrassV != null
+            && isBlueGrassV is bool?
+        )
+        {
+            isBlueGrass = (bool)isBlueGrassV;
+        }
         List<List<Texture2D>> sourceTx =
         [
             [],
@@ -94,7 +49,7 @@ internal sealed class MoreGrassPackContext(
             return null;
         }
 
-        int height = 100;
+        int height = GrassComp.SPRITE_HEIGHT * (isBlueGrass ? 12 : 5);
         int width = GrassComp.SPRITE_WIDTH * count;
 
         Texture2D spriteSheet = new(Game1.graphics.GraphicsDevice, width, height);
@@ -107,9 +62,16 @@ internal sealed class MoreGrassPackContext(
 
         for (int i = 0; i < sourceTx.Count; i++)
         {
-            yOffset = 20 * i;
-            if (i == 3)
-                yOffset += 20;
+            if (isBlueGrass)
+            {
+                yOffset = GrassComp.SPRITE_HEIGHT * (i + 8);
+            }
+            else
+            {
+                yOffset = GrassComp.SPRITE_HEIGHT * i;
+                if (i == 3)
+                    yOffset += GrassComp.SPRITE_HEIGHT;
+            }
             xOffset = 0;
 
             List<Texture2D> srcList = sourceTx[i];
@@ -153,7 +115,7 @@ internal sealed class MoreGrassPackContext(
             Texture = $"{ModEntry.ModId}/{contentPack.Manifest.UniqueID}/MoreGrassSheet",
             Weight = ModEntry.Config.MoreGrassShimWeight,
             SubVariants = Enumerable.Range(0, count).ToList(),
-            ApplyTo = [Grass.springGrass],
+            ApplyTo = [isBlueGrass ? Grass.blueGrass : Grass.springGrass],
         };
         if (includeSeason.Count < 4)
         {

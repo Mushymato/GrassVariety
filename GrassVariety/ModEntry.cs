@@ -88,10 +88,22 @@ public sealed class ModEntry : Mod
         Helper.GameContent.InvalidateCache(AssetManager.Asset_GrassVariety);
     }
 
-    private void ConsoleGrassify(string arg1, string[] arg2)
+    private void ConsoleGrassify(string cmd, string[] args)
     {
         if (!Context.IsWorldReady)
             return;
+        List<int> grassType = [];
+        foreach (string arg in args)
+        {
+            if (int.TryParse(arg, out int grsType))
+            {
+                grassType.Add(grsType);
+            }
+        }
+        if (grassType.Count == 0)
+        {
+            grassType.Add(Grass.springGrass);
+        }
         xTile.Layers.Layer layer = Game1.currentLocation.Map.RequireLayer("Back");
         for (int x = 0; x < layer.LayerWidth; x++)
         {
@@ -100,11 +112,7 @@ public sealed class ModEntry : Mod
                 Vector2 pos = new(x, y);
                 if (layer.Tiles[x, y] is null || Game1.currentLocation.terrainFeatures.ContainsKey(pos))
                     continue;
-                Game1.currentLocation.terrainFeatures.Add(
-                    pos,
-                    // new Grass(Random.Shared.NextBool() ? Grass.springGrass : Grass.blueGrass, 4)
-                    new Grass(Grass.springGrass, 4)
-                );
+                Game1.currentLocation.terrainFeatures.Add(pos, new Grass(Random.Shared.ChooseFrom(grassType), 4));
             }
         }
     }

@@ -79,6 +79,7 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
         // See https://stardewvalleywiki.com/Modding:Maps#Action
         "tile action string"
       ],
+      // 
     },
   }
 }

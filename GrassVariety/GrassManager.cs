@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
@@ -34,6 +33,8 @@ public static class GrassManager
         helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
         helper.Events.Player.Warped += OnWarped;
+        helper.Events.GameLoop.Saving += OnSaving;
+        helper.Events.GameLoop.Saved += OnSaved;
 
         Harmony harmony = new(ModEntry.ModId);
 
@@ -97,6 +98,16 @@ public static class GrassManager
         grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
     }
 
+    private static void OnSaving(object? sender, SavingEventArgs e)
+    {
+        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Deactivate();
+    }
+
+    private static void OnSaved(object? sender, SavedEventArgs e)
+    {
+        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
+    }
+
     private static void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
     {
         foreach ((_, LocationGrassWatcher? watcher) in grassWatchers)
@@ -133,15 +144,20 @@ public static class GrassManager
             Random random = GetTileRand(__instance.Tile);
             for (int i = 0; i < 4; i++)
             {
-                ___whichWeed[i] = chosen.BaseSubVariantIndex + random.ChooseFrom(chosen.SubVariants);
+                ___whichWeed[i] = chosen.CompSheetCoord.X + random.ChooseFrom(chosen.SubVariants);
             }
         }
-        else if (chosen.BaseSubVariantIndex > -1)
+        else if (chosen.MergedSheetNum > -1)
         {
             for (int i = 0; i < 4; i++)
             {
-                ___whichWeed[i] = chosen.BaseSubVariantIndex + ___whichWeed[i];
+                ___whichWeed[i] = chosen.CompSheetCoord.X + ___whichWeed[i];
             }
+        }
+        if (chosen.CompSheetCoord.Y > 0)
+        {
+            int yOffsetValue = __instance.grassSourceOffset.Value % GrassComp.Y_HEIGHT;
+            __instance.grassSourceOffset.Value = GrassComp.Y_HEIGHT * chosen.CompSheetCoord.Y + yOffsetValue;
         }
     }
 
@@ -338,7 +354,7 @@ public static class GrassManager
         List<GrassVarietyData> grassList = gvfcl[grassType - 1];
         if (grassList.Count == 0)
         {
-            grass.modData.Remove(ModData_ChosenVariant);
+            UnapplyGrassVarietyState(grass);
             return;
         }
 
@@ -349,7 +365,7 @@ public static class GrassManager
                 || (int.TryParse(nextRecheckDayStr, out int nextRecheckDay) && Game1.Date.TotalDays >= nextRecheckDay)
             )
             {
-                grass.modData.Remove(ModData_ChosenVariant);
+                UnapplyGrassVarietyState(grass);
             }
             else if (TryGetChosenGrassVariety(grass, out chosen) && !grassList.Contains(chosen))
             {
@@ -409,7 +425,13 @@ public static class GrassManager
         {
             return chosen != null;
         }
-        grass.modData.Remove(ModData_ChosenVariant);
+        UnapplyGrassVarietyState(grass);
         return false;
+    }
+
+    private static void UnapplyGrassVarietyState(Grass grass)
+    {
+        grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
+        grass.modData.Remove(ModData_ChosenVariant);
     }
 }

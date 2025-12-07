@@ -11,7 +11,8 @@ namespace GrassVariety;
 internal static class GrassComp
 {
     private const int MAX_PER_ROW = 273;
-    private const int HEIGHT = 240;
+    private const int MAX_PER_COL = 17;
+    internal const int Y_HEIGHT = 240;
     internal const int SPRITE_WIDTH = 15;
     internal const int SPRITE_HEIGHT = 20;
 
@@ -20,7 +21,7 @@ internal static class GrassComp
     private static readonly List<Texture2D> spriteSheets = [];
 
     private static List<GrassVarietyData>? validVarieties = null;
-    private static List<int>? varietyMaxIndex = null;
+    private static List<Point>? varietyMaxIndex = null;
 
     internal static HashSet<byte> GetOffsetY(HashSet<byte>? applyTo)
     {
@@ -76,28 +77,31 @@ internal static class GrassComp
                 && !(string.IsNullOrEmpty(variety.Texture) || !Game1.content.DoesAssetExist<Texture2D>(variety.Texture))
             )
             .ToList();
-        varietyMaxIndex = [0];
+        varietyMaxIndex = [new(0, 0)];
 
         int mergedSheetIndex = 0;
         foreach (GrassVarietyData variety in validVarieties)
         {
             int subVariantCount =
                 variety.SubVariants == null ? 3 : variety.SubVariants.Max() - variety.SubVariants.Min() + 1;
-            int currMaxIdx = varietyMaxIndex[^1];
-            if (currMaxIdx + subVariantCount > MAX_PER_ROW)
+            Point currCompSheetCoord = varietyMaxIndex[^1];
+            if (currCompSheetCoord.X + subVariantCount > MAX_PER_ROW)
             {
-                variety.BaseSubVariantIndex = 0;
-                mergedSheetIndex++;
-                currMaxIdx = 0;
-                varietyMaxIndex.Add(0);
+                currCompSheetCoord.X = 0;
+                currCompSheetCoord.Y++;
+                if (currCompSheetCoord.Y >= MAX_PER_COL)
+                {
+                    mergedSheetIndex++;
+                    currCompSheetCoord = new(0, 0);
+                    varietyMaxIndex.Add(currCompSheetCoord);
+                }
             }
-            else
-            {
-                variety.BaseSubVariantIndex = currMaxIdx;
-            }
-            variety.MergedSheetIndex = mergedSheetIndex;
-            currMaxIdx += subVariantCount;
-            varietyMaxIndex[^1] = currMaxIdx;
+            variety.MergedSheetNum = mergedSheetIndex;
+            variety.CompSheetCoord = new(currCompSheetCoord.X, currCompSheetCoord.Y);
+
+            currCompSheetCoord.X += subVariantCount;
+
+            varietyMaxIndex[^1] = currCompSheetCoord;
         }
     }
 
@@ -109,7 +113,9 @@ internal static class GrassComp
         }
         for (int i = 0; i < varietyMaxIndex!.Count; i++)
         {
-            int width = varietyMaxIndex[i] * SPRITE_WIDTH;
+            Point currCompSheetCoord = varietyMaxIndex[i];
+            int width = currCompSheetCoord.Y >= 1 ? MAX_PER_ROW * SPRITE_WIDTH : currCompSheetCoord.X * SPRITE_WIDTH;
+            int height = (currCompSheetCoord.Y + 1) * Y_HEIGHT;
 
             Texture2D compTx;
             if (spriteSheets.Count > i)
@@ -117,13 +123,13 @@ internal static class GrassComp
                 compTx = spriteSheets[i];
                 if (compTx.Width < width)
                 {
-                    using Texture2D tempTx = new(Game1.graphics.GraphicsDevice, width, HEIGHT);
+                    using Texture2D tempTx = new(Game1.graphics.GraphicsDevice, width, height);
                     compTx.CopyFromTexture(tempTx);
                 }
             }
             else
             {
-                compTx = new(Game1.graphics.GraphicsDevice, width, HEIGHT);
+                compTx = new(Game1.graphics.GraphicsDevice, width, height);
                 spriteSheets.Add(compTx);
             }
             Color[] targetData = new Color[compTx.GetElementCount()];
@@ -131,7 +137,7 @@ internal static class GrassComp
 
             foreach (GrassVarietyData variety in validVarieties!)
             {
-                if (variety.MergedSheetIndex != i)
+                if (variety.MergedSheetNum != i)
                     continue;
 
                 sourceAssets.Add(ModEntry.ParseAssetName(variety.Texture));
@@ -151,8 +157,8 @@ internal static class GrassComp
                             ref targetData,
                             compTx.Width,
                             new(
-                                SPRITE_WIDTH * variety.BaseSubVariantIndex,
-                                SPRITE_HEIGHT * applyTo,
+                                SPRITE_WIDTH * variety.CompSheetCoord.X,
+                                variety.CompSheetCoord.Y * Y_HEIGHT + SPRITE_HEIGHT * applyTo,
                                 SPRITE_WIDTH * 3,
                                 SPRITE_HEIGHT
                             )
@@ -169,8 +175,8 @@ internal static class GrassComp
                                 ref targetData,
                                 compTx.Width,
                                 new(
-                                    SPRITE_WIDTH * (variety.BaseSubVariantIndex + j),
-                                    SPRITE_HEIGHT * applyTo,
+                                    SPRITE_WIDTH * (variety.CompSheetCoord.X + j),
+                                    variety.CompSheetCoord.Y * Y_HEIGHT + SPRITE_HEIGHT * applyTo,
                                     SPRITE_WIDTH,
                                     SPRITE_HEIGHT
                                 )
@@ -197,6 +203,7 @@ internal static class GrassComp
         Rectangle targetRect
     )
     {
+        // ModEntry.Log($"Copy src{sourceRect} to dst{targetRect}");
         // r is row, aka y
         // copy the array row by row from source to target
         for (int r = 0; r < SPRITE_HEIGHT; r++)
