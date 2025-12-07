@@ -74,6 +74,7 @@ internal static class GrassComp
         validVarieties = AssetManager
             .RawGrassVarieties.Values.Where(variety =>
                 variety.EnableAtlasOptimization
+                && variety.Weight > 0
                 && !(string.IsNullOrEmpty(variety.Texture) || !Game1.content.DoesAssetExist<Texture2D>(variety.Texture))
             )
             .ToList();

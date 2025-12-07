@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - More Grass packs are now supported via compat shim option.
 
+### Changed
+
+- Performance improvements by reducing texture swapping, can be disabled if needed via `EnableAtlasOptimization`.
+
 ## [1.1.2] - 2025-10-14
 
 ### Fixed
