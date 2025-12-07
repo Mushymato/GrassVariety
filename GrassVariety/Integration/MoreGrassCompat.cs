@@ -95,11 +95,11 @@ internal sealed class MoreGrassPackContext(
         }
 
         int height = 100;
-        int width = 15 * count;
+        int width = GrassComp.SPRITE_WIDTH * count;
 
         Texture2D spriteSheet = new(Game1.graphics.GraphicsDevice, width, height);
 
-        Color[] srcData = new Color[15 * 20];
+        Color[] srcData = new Color[GrassComp.SPRITE_WIDTH * GrassComp.SPRITE_HEIGHT];
         int xOffset = 0;
         int yOffset = 0;
 
@@ -128,12 +128,17 @@ internal sealed class MoreGrassPackContext(
                 srcTx.GetData(srcData, 0, srcData.Length);
                 spriteSheet.SetData(
                     0,
-                    new Rectangle(xOffset, yOffset + (srcTx.Height < 20 ? 20 - srcTx.Height : 0), 15, 20),
+                    new Rectangle(
+                        xOffset,
+                        yOffset + (srcTx.Height < GrassComp.SPRITE_HEIGHT ? GrassComp.SPRITE_HEIGHT - srcTx.Height : 0),
+                        GrassComp.SPRITE_WIDTH,
+                        GrassComp.SPRITE_HEIGHT
+                    ),
                     srcData,
                     0,
                     srcData.Length
                 );
-                xOffset += 15;
+                xOffset += GrassComp.SPRITE_WIDTH;
                 j++;
                 if (j >= srcList.Count)
                 {
@@ -154,7 +159,7 @@ internal sealed class MoreGrassPackContext(
         {
             grassVarietyData.Condition = string.Concat("LOCATION_SEASON Here ", string.Join(' ', includeSeason));
         }
-
+        spriteSheet.Name = grassVarietyData.Texture;
         return new MoreGrassPackContext(contentPack, spriteSheet, grassVarietyData);
     }
 

@@ -117,7 +117,13 @@ public sealed class GrassVarietyData
 
     public List<string>? OnCutTileActions { get; set; } = null;
 
-    internal Texture2D LoadTexture() => Game1.content.Load<Texture2D>(Texture);
+    public bool EnableAtlasOptimization { get; set; } = true;
+
+    internal int BaseSubVariantIndex { get; set; } = -1;
+    internal int MergedSheetIndex { get; set; } = -1;
+
+    internal Texture2D LoadTexture() =>
+        EnableAtlasOptimization ? GrassComp.LoadTexture(MergedSheetIndex) : Game1.content.Load<Texture2D>(Texture);
 }
 
 public static class AssetManager
@@ -190,6 +196,9 @@ public static class AssetManager
                         );
                 }
             }
+
+            GrassComp.RecalculateSpriteSheet();
+
             grassVarietiesLoaded = true;
             return grassVarieties;
         }
@@ -237,6 +246,11 @@ public static class AssetManager
         {
             rawGrassVarieties = null;
             grassVarieties.ClearGrassVarieties();
+            GrassComp.InvalidateData();
+        }
+        else
+        {
+            GrassComp.CheckInvalidate(e.NamesWithoutLocale);
         }
     }
 }

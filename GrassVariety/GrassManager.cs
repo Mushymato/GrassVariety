@@ -130,11 +130,17 @@ public static class GrassManager
             return;
         if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
         {
-            ModEntry.Log($"{__instance.Tile}: {chosen.Id} {chosen.SubVariants} {__instance.texture.Value.Name}");
             Random random = GetTileRand(__instance.Tile);
             for (int i = 0; i < 4; i++)
             {
-                ___whichWeed[i] = random.ChooseFrom(chosen.SubVariants);
+                ___whichWeed[i] = chosen.BaseSubVariantIndex + random.ChooseFrom(chosen.SubVariants);
+            }
+        }
+        else if (chosen.BaseSubVariantIndex > -1)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                ___whichWeed[i] = chosen.BaseSubVariantIndex + ___whichWeed[i];
             }
         }
     }

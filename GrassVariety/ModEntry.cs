@@ -20,12 +20,14 @@ public sealed class ModEntry : Mod
 
     public const string ModId = "mushymato.GrassVariety";
     private static IMonitor? mon;
+    internal static IGameContentHelper content = null!;
     internal static ModConfig Config = null!;
 
     public override void Entry(IModHelper helper)
     {
         Config = helper.ReadConfig<ModConfig>();
         mon = Monitor;
+        content = helper.GameContent;
 
         MoreGrassShim.Register(helper);
         GrassManager.Register(helper);
@@ -55,6 +57,11 @@ public sealed class ModEntry : Mod
         {
             Config.Register(Helper, ModManifest, gmcm);
         }
+    }
+
+    internal static IAssetName ParseAssetName(string asset)
+    {
+        return content.ParseAssetName(asset);
     }
 
     private void ConsoleSetDefaultGrassWeight(string cmd, string[] args)
