@@ -13,17 +13,26 @@ internal sealed class MoreGrassPackContext(
     GrassVarietyData grassVarietyData
 )
 {
-    internal static MoreGrassPackContext? Make(IContentPack contentPack)
+    private static bool GetFlagFromManifest(IContentPack contentPack, string key, bool defaultValue)
     {
-        bool isBlueGrass = false;
         if (
-            contentPack.Manifest.ExtraFields.TryGetValue($"{ModEntry.ModId}/IsBlueGrass", out object? isBlueGrassV)
-            && isBlueGrassV != null
-            && isBlueGrassV is bool?
+            contentPack.Manifest.ExtraFields.TryGetValue(key, out object? isBoolV)
+            && isBoolV != null
+            && isBoolV is bool?
         )
         {
-            isBlueGrass = (bool)isBlueGrassV;
+            return (bool)isBoolV;
         }
+        return defaultValue;
+    }
+
+    internal static MoreGrassPackContext? Make(IContentPack contentPack)
+    {
+        bool isGreenGrass = GetFlagFromManifest(contentPack, $"{ModEntry.ModId}/IsGreenGrass", true);
+        bool isBlueGrass = GetFlagFromManifest(contentPack, $"{ModEntry.ModId}/IsBlueGrass", false);
+        if (!isGreenGrass && !isBlueGrass)
+            return null;
+
         List<List<Texture2D>> sourceTx =
         [
             [],
@@ -56,21 +65,22 @@ internal sealed class MoreGrassPackContext(
 
         Color[] srcData = new Color[GrassComp.SPRITE_WIDTH * GrassComp.SPRITE_HEIGHT];
         int xOffset = 0;
-        int yOffset = 0;
 
         List<string> includeSeason = [];
 
         for (int i = 0; i < sourceTx.Count; i++)
         {
-            if (isBlueGrass)
+            List<int> yOffsets = [];
+            if (isGreenGrass)
             {
-                yOffset = GrassComp.SPRITE_HEIGHT * (i + 8);
-            }
-            else
-            {
-                yOffset = GrassComp.SPRITE_HEIGHT * i;
+                int yOffset = GrassComp.SPRITE_HEIGHT * i;
                 if (i == 3)
                     yOffset += GrassComp.SPRITE_HEIGHT;
+                yOffsets.Add(yOffset);
+            }
+            if (isBlueGrass)
+            {
+                yOffsets.Add(GrassComp.SPRITE_HEIGHT * (i + 8));
             }
             xOffset = 0;
 
@@ -88,18 +98,22 @@ internal sealed class MoreGrassPackContext(
             {
                 Texture2D srcTx = srcList[j];
                 srcTx.GetData(srcData, 0, srcData.Length);
-                spriteSheet.SetData(
-                    0,
-                    new Rectangle(
-                        xOffset,
-                        yOffset + (srcTx.Height < GrassComp.SPRITE_HEIGHT ? GrassComp.SPRITE_HEIGHT - srcTx.Height : 0),
-                        GrassComp.SPRITE_WIDTH,
-                        GrassComp.SPRITE_HEIGHT
-                    ),
-                    srcData,
-                    0,
-                    srcData.Length
-                );
+                foreach (int yOffset in yOffsets)
+                {
+                    spriteSheet.SetData(
+                        0,
+                        new Rectangle(
+                            xOffset,
+                            yOffset
+                                + (srcTx.Height < GrassComp.SPRITE_HEIGHT ? GrassComp.SPRITE_HEIGHT - srcTx.Height : 0),
+                            GrassComp.SPRITE_WIDTH,
+                            GrassComp.SPRITE_HEIGHT
+                        ),
+                        srcData,
+                        0,
+                        srcData.Length
+                    );
+                }
                 xOffset += GrassComp.SPRITE_WIDTH;
                 j++;
                 if (j >= srcList.Count)
@@ -111,12 +125,20 @@ internal sealed class MoreGrassPackContext(
 
         GrassVarietyData grassVarietyData = new()
         {
-            Id = $"{contentPack.Manifest.UniqueID}_MoreGrassShim",
+            Id = $"{ModEntry.ModId}@{contentPack.Manifest.UniqueID}@MoreGrassShim",
             Texture = $"{ModEntry.ModId}/{contentPack.Manifest.UniqueID}/MoreGrassSheet",
             Weight = ModEntry.Config.MoreGrassShimWeight,
             SubVariants = Enumerable.Range(0, count).ToList(),
-            ApplyTo = [isBlueGrass ? Grass.blueGrass : Grass.springGrass],
+            ApplyTo = [],
         };
+        if (isGreenGrass)
+        {
+            grassVarietyData.ApplyTo.Add(Grass.springGrass);
+        }
+        if (isBlueGrass)
+        {
+            grassVarietyData.ApplyTo.Add(Grass.blueGrass);
+        }
         if (includeSeason.Count < 4)
         {
             grassVarietyData.Condition = string.Concat("LOCATION_SEASON Here ", string.Join(' ', includeSeason));
