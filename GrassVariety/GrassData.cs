@@ -189,7 +189,7 @@ public static class AssetManager
             }
             grassVarietiesLoaded = true;
 
-            GrassComp.RecalculateSpriteSheet();
+            GrassComp.RecombineSpriteSheet();
 
             return grassVarieties;
         }

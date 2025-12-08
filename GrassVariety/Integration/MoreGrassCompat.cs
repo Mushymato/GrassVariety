@@ -1,8 +1,10 @@
+using System.Buffers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.Extensions;
 using StardewValley.TerrainFeatures;
 
 namespace GrassVariety.Integration;
@@ -39,7 +41,7 @@ internal sealed class MoreGrassPackContext(
         if (!isGreenGrass && !isBlueGrass)
             return null;
 
-        List<List<Texture2D>> sourceTx =
+        List<List<Texture2D>> sourceTextureList =
         [
             [],
             [],
@@ -55,18 +57,18 @@ internal sealed class MoreGrassPackContext(
                     continue;
                 string relFile = Path.GetRelativePath(contentPack.DirectoryPath, file);
                 Texture2D srcTx = contentPack.ModContent.Load<Texture2D>(relFile);
-                if (srcTx.Width > GrassComp.SPRITE_WIDTH || srcTx.Height > GrassComp.SPRITE_HEIGHT)
-                {
-                    ModEntry.Log(
-                        $"More Grass Shim got texture '{file}' with size {srcTx.Width}x{srcTx.Height}. It is larger than the expected size {GrassComp.SPRITE_WIDTH}x{GrassComp.SPRITE_HEIGHT} and will be skipped.",
-                        LogLevel.Warn
-                    );
-                    continue;
-                }
-                sourceTx[(int)season].Add(srcTx);
+                // if (srcTx.Width > GrassComp.SPRITE_WIDTH || srcTx.Height > GrassComp.SPRITE_HEIGHT)
+                // {
+                //     ModEntry.Log(
+                //         $"More Grass Shim got texture '{file}' with size {srcTx.Width}x{srcTx.Height}. It is larger than the expected size {GrassComp.SPRITE_WIDTH}x{GrassComp.SPRITE_HEIGHT} and will be skipped.",
+                //         LogLevel.Warn
+                //     );
+                //     continue;
+                // }
+                sourceTextureList[(int)season].Add(srcTx);
             }
         }
-        int count = sourceTx.Max(lst => lst.Count);
+        int count = sourceTextureList.Max(lst => lst.Count);
         if (count == 0)
         {
             ModEntry.Log($"No grass sprites found in '{contentPack.Manifest.UniqueID}'");
@@ -76,14 +78,16 @@ internal sealed class MoreGrassPackContext(
         int height = GrassComp.SPRITE_HEIGHT * (isBlueGrass ? 12 : 5);
         int width = GrassComp.SPRITE_WIDTH * count;
 
-        Texture2D spriteSheet = new(Game1.graphics.GraphicsDevice, width, height);
+        Texture2D moreGrassSpriteSheet = new(Game1.graphics.GraphicsDevice, width, height);
+        Color[] targetData = ArrayPool<Color>.Shared.Rent(moreGrassSpriteSheet.GetElementCount());
 
-        Color[] srcData = new Color[GrassComp.SPRITE_WIDTH * GrassComp.SPRITE_HEIGHT];
         int xOffset = 0;
 
         List<string> includeSeason = [];
 
-        for (int i = 0; i < sourceTx.Count; i++)
+        Rectangle sourceRect = new(0, 0, GrassComp.SPRITE_WIDTH, GrassComp.SPRITE_HEIGHT);
+
+        for (int i = 0; i < sourceTextureList.Count; i++)
         {
             List<int> yOffsets = [];
             if (isGreenGrass)
@@ -99,7 +103,7 @@ internal sealed class MoreGrassPackContext(
             }
             xOffset = 0;
 
-            List<Texture2D> srcList = sourceTx[i];
+            List<Texture2D> srcList = sourceTextureList[i];
             if (srcList.Count > 0)
             {
                 includeSeason.Add(((Season)i).ToString().ToLowerInvariant());
@@ -111,24 +115,33 @@ internal sealed class MoreGrassPackContext(
             int j = 0;
             while (xOffset < width)
             {
-                Texture2D srcTx = srcList[j];
-                srcTx.GetData(srcData, 0, srcData.Length);
+                Texture2D sourceTexture = srcList[j];
+
+                Color[] sourceData = ArrayPool<Color>.Shared.Rent(sourceTexture.GetElementCount());
+                sourceTexture.GetData(sourceData, 0, sourceTexture.GetElementCount());
                 foreach (int yOffset in yOffsets)
                 {
-                    spriteSheet.SetData(
-                        0,
+                    GrassComp.CopySourceSpriteToTarget(
+                        ref sourceData,
+                        sourceTexture.Width,
+                        sourceRect,
+                        ref targetData,
+                        moreGrassSpriteSheet.Width,
                         new Rectangle(
                             xOffset,
                             yOffset
-                                + (srcTx.Height < GrassComp.SPRITE_HEIGHT ? GrassComp.SPRITE_HEIGHT - srcTx.Height : 0),
+                                + (
+                                    sourceTexture.Height < GrassComp.SPRITE_HEIGHT
+                                        ? GrassComp.SPRITE_HEIGHT - sourceTexture.Height
+                                        : 0
+                                ),
                             GrassComp.SPRITE_WIDTH,
                             GrassComp.SPRITE_HEIGHT
-                        ),
-                        srcData,
-                        0,
-                        srcData.Length
+                        )
                     );
                 }
+                ArrayPool<Color>.Shared.Return(sourceData);
+
                 xOffset += GrassComp.SPRITE_WIDTH;
                 j++;
                 if (j >= srcList.Count)
@@ -137,6 +150,9 @@ internal sealed class MoreGrassPackContext(
                 }
             }
         }
+
+        moreGrassSpriteSheet.SetData(targetData, 0, moreGrassSpriteSheet.GetElementCount());
+        ArrayPool<Color>.Shared.Return(targetData);
 
         GrassVarietyData grassVarietyData = new()
         {
@@ -158,8 +174,8 @@ internal sealed class MoreGrassPackContext(
         {
             grassVarietyData.Condition = string.Concat("LOCATION_SEASON Here ", string.Join(' ', includeSeason));
         }
-        spriteSheet.Name = grassVarietyData.Texture;
-        return new MoreGrassPackContext(contentPack, spriteSheet, grassVarietyData);
+        moreGrassSpriteSheet.Name = grassVarietyData.Texture;
+        return new MoreGrassPackContext(contentPack, moreGrassSpriteSheet, grassVarietyData);
     }
 
     internal void AssetRequested(AssetRequestedEventArgs e)

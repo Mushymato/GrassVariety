@@ -68,7 +68,7 @@ internal static class GrassComp
         return offsetY;
     }
 
-    internal static void RecalculateSpriteSheet()
+    private static void RecalculateSpriteSheet()
     {
         sourceAssets.Clear();
         validVarieties = AssetManager
@@ -106,7 +106,7 @@ internal static class GrassComp
         }
     }
 
-    private static void RecombineSpriteSheet()
+    internal static void RecombineSpriteSheet()
     {
         if (varietyMaxIndex == null || validVarieties == null)
         {
@@ -133,7 +133,7 @@ internal static class GrassComp
                 compTx = new(Game1.graphics.GraphicsDevice, width, height);
                 spriteSheets.Add(compTx);
             }
-            Color[] targetData = new Color[compTx.GetElementCount()];
+            Color[] targetData = ArrayPool<Color>.Shared.Rent(compTx.GetElementCount());
             Array.Fill(targetData, Color.LawnGreen);
 
             foreach (GrassVarietyData variety in validVarieties!)
@@ -189,13 +189,15 @@ internal static class GrassComp
                 ArrayPool<Color>.Shared.Return(sourceData);
             }
 
-            compTx.SetData(targetData);
+            compTx.SetData(targetData, 0, compTx.GetElementCount());
             compTx.Name = $"{ModEntry.ModId}/Comp/{i}";
+
+            ArrayPool<Color>.Shared.Return(targetData);
         }
         IsTxValid = true;
     }
 
-    private static void CopySourceSpriteToTarget(
+    internal static void CopySourceSpriteToTarget(
         ref Color[] sourceData,
         int sourceTxWidth,
         Rectangle sourceRect,

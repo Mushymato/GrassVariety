@@ -335,9 +335,9 @@ public static class GrassManager
 
     private static void Grass_textureName_Postfix(Grass __instance, ref string __result)
     {
-        if (__instance.texture.IsValueCreated && __instance.texture.Value.Name is string txName)
+        if (TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen))
         {
-            __result = txName;
+            __result = chosen.Texture;
         }
     }
 
