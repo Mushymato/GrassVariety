@@ -17,7 +17,7 @@ internal static class GrassComp
     internal const int SPRITE_HEIGHT = 20;
 
     internal static bool IsTxValid { get; set; } = false;
-    internal static readonly List<IAssetName> sourceAssets = [];
+    private static readonly List<IAssetName> sourceAssets = [];
     private static readonly List<Texture2D> spriteSheets = [];
 
     private static List<GrassVarietyData>? validVarieties = null;
@@ -134,7 +134,7 @@ internal static class GrassComp
                 spriteSheets.Add(compTx);
             }
             Color[] targetData = new Color[compTx.GetElementCount()];
-            Array.Fill(targetData, Color.Transparent);
+            Array.Fill(targetData, Color.LawnGreen);
 
             foreach (GrassVarietyData variety in validVarieties!)
             {
@@ -246,4 +246,58 @@ internal static class GrassComp
             return;
         }
     }
+
+    /// Based on https://github.com/Pathoschild/StardewMods/blob/95d695b205199de4bad86770d69a30806d1721a2/ContentPatcher/Framework/Commands/Commands/ExportCommand.cs
+    /// MIT License
+    #region PATCH_EXPORT
+    internal static void Export(string exportDir)
+    {
+        if (!IsTxValid)
+        {
+            RecombineSpriteSheet();
+        }
+        foreach (Texture2D compTx in spriteSheets)
+        {
+            string pngName = Path.Combine(
+                exportDir,
+                SanitizePath(string.Concat(Path.GetFileName(compTx.Name))) + ".png"
+            );
+            using Texture2D exported = UnPremultiplyTransparency(compTx);
+            using Stream stream = File.Create(pngName);
+            exported.SaveAsPng(stream, exported.Width, exported.Height);
+            ModEntry.Log($"Exported {pngName}", LogLevel.Info);
+        }
+    }
+
+    private static string SanitizePath(string path)
+    {
+        return string.Join('_', path.Split(Path.GetInvalidFileNameChars()));
+    }
+
+    /// <summary>Reverse premultiplication applied to an image asset by the XNA content pipeline.</summary>
+    /// <param name="texture">The texture to adjust.</param>
+    private static Texture2D UnPremultiplyTransparency(Texture2D texture)
+    {
+        Color[] data = new Color[texture.Width * texture.Height];
+        texture.GetData(data);
+
+        for (int i = 0; i < data.Length; i++)
+        {
+            Color pixel = data[i];
+            if (pixel.A == 0)
+                continue;
+
+            data[i] = new Color(
+                (byte)(pixel.R * 255 / pixel.A),
+                (byte)(pixel.G * 255 / pixel.A),
+                (byte)(pixel.B * 255 / pixel.A),
+                pixel.A
+            ); // don't use named parameters, which are inconsistent between MonoGame (e.g. 'alpha') and XNA (e.g. 'a')
+        }
+
+        Texture2D result = new(texture.GraphicsDevice ?? Game1.graphics.GraphicsDevice, texture.Width, texture.Height);
+        result.SetData(data);
+        return result;
+    }
+    #endregion
 }

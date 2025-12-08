@@ -54,7 +54,16 @@ internal sealed class MoreGrassPackContext(
                 if (!file.EndsWith(".png"))
                     continue;
                 string relFile = Path.GetRelativePath(contentPack.DirectoryPath, file);
-                sourceTx[(int)season].Add(contentPack.ModContent.Load<Texture2D>(relFile));
+                Texture2D srcTx = contentPack.ModContent.Load<Texture2D>(relFile);
+                if (srcTx.Width > GrassComp.SPRITE_WIDTH || srcTx.Height > GrassComp.SPRITE_HEIGHT)
+                {
+                    ModEntry.Log(
+                        $"More Grass Shim got texture '{file}' with size {srcTx.Width}x{srcTx.Height}. It is larger than the expected size {GrassComp.SPRITE_WIDTH}x{GrassComp.SPRITE_HEIGHT} and will be skipped.",
+                        LogLevel.Warn
+                    );
+                    continue;
+                }
+                sourceTx[(int)season].Add(srcTx);
             }
         }
         int count = sourceTx.Max(lst => lst.Count);

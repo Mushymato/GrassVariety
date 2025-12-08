@@ -36,6 +36,7 @@ public sealed class ModEntry : Mod
             ConsoleSetDefaultGrassWeight
         );
         helper.ConsoleCommands.Add("gv-grassify", "Put grass everywhere.", ConsoleGrassify);
+        helper.ConsoleCommands.Add("gv-export", "Export the combined sheets", ConsoleExport);
 
         MoreGrassShim.Register(helper);
     }
@@ -84,6 +85,13 @@ public sealed class ModEntry : Mod
                 Game1.currentLocation.terrainFeatures.Add(pos, new Grass(Random.Shared.ChooseFrom(grassType), 4));
             }
         }
+    }
+
+    private void ConsoleExport(string arg1, string[] arg2)
+    {
+        string exportDir = Path.Combine(Helper.DirectoryPath, "export");
+        Directory.CreateDirectory(exportDir);
+        GrassComp.Export(exportDir);
     }
 
     /// <summary>SMAPI static monitor Log wrapper</summary>

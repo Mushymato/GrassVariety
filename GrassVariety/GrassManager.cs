@@ -100,12 +100,18 @@ public static class GrassManager
 
     private static void OnSaving(object? sender, SavingEventArgs e)
     {
-        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Deactivate();
+        foreach ((_, LocationGrassWatcher? watcher) in grassWatchers)
+        {
+            watcher?.Deactivate();
+        }
     }
 
     private static void OnSaved(object? sender, SavedEventArgs e)
     {
-        grassWatchers.GetValue(Game1.currentLocation, LocationGrassWatcher.Create)?.Activate();
+        foreach ((_, LocationGrassWatcher? watcher) in grassWatchers)
+        {
+            watcher?.Activate();
+        }
     }
 
     private static void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -433,5 +439,6 @@ public static class GrassManager
     {
         grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
         grass.modData.Remove(ModData_ChosenVariant);
+        grass.texture = new Lazy<Texture2D>(() => Game1.content.Load<Texture2D>(AssetManager.DefaultGrassTexture));
     }
 }
