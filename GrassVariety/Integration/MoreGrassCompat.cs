@@ -80,6 +80,7 @@ internal sealed class MoreGrassPackContext(
 
         Texture2D moreGrassSpriteSheet = new(Game1.graphics.GraphicsDevice, width, height);
         Color[] targetData = ArrayPool<Color>.Shared.Rent(moreGrassSpriteSheet.GetElementCount());
+        Array.Fill(targetData, Color.Transparent);
 
         int xOffset = 0;
 

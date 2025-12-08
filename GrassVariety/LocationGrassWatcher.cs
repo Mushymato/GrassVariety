@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
+using Netcode;
 using StardewValley;
 using StardewValley.Delegates;
 using StardewValley.TerrainFeatures;
@@ -98,6 +99,7 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
             if (feature is not Grass grass)
                 continue;
             GrassManager.ChooseAndApplyGrassVariety(grassVarietiesForLocation, grass);
+            grass.grassSourceOffset.fieldChangeEvent += OnGrassSourceOffsetChanged;
         }
 
         location.terrainFeatures.OnValueAdded += OnNewGrassAdded;
@@ -113,11 +115,21 @@ internal class LocationGrassWatcher(GameLocation location) : IDisposable
         {
             if (feature is not Grass grass)
                 continue;
+            grass.grassSourceOffset.fieldChangeEvent -= OnGrassSourceOffsetChanged;
             grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
         }
         location.terrainFeatures.OnValueAdded -= OnNewGrassAdded;
         location.terrainFeatures.OnValueTargetUpdated -= OnGrassChanged;
         IsActive = false;
+    }
+
+    private void OnGrassSourceOffsetChanged(NetInt field, int oldValue, int newValue)
+    {
+        if (oldValue >= GrassComp.Y_HEIGHT && newValue < GrassComp.Y_HEIGHT)
+        {
+            int yOffset = oldValue / GrassComp.Y_HEIGHT;
+            field.Value = yOffset * GrassComp.Y_HEIGHT + newValue;
+        }
     }
 
     private void OnNewGrassAdded(Vector2 key, TerrainFeature value)
