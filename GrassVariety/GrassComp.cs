@@ -8,6 +8,35 @@ using StardewValley.TerrainFeatures;
 
 namespace GrassVariety;
 
+internal sealed class PostionOnComp()
+{
+    public int Sheet = 0;
+    public int X = 0;
+    public HashSet<int> XIndexes = [];
+    public int Y = 0;
+    public int XBase = 0;
+
+    public void PopulateXIndexes(List<int>? subVariants)
+    {
+        if (subVariants == null)
+        {
+            XIndexes.Add(0);
+            XIndexes.Add(1);
+            XIndexes.Add(2);
+        }
+        else if (subVariants.Count > 0)
+        {
+            XIndexes.AddRange(subVariants);
+        }
+    }
+}
+
+internal sealed class PositionOnCompGroup()
+{
+    public bool IsTxValid = false;
+    public PostionOnComp[] Arr = [new(), new(), new(), new(), new(), new(), new()];
+}
+
 internal static class GrassComp
 {
     private const int MAX_PER_ROW = 273;
@@ -16,168 +45,198 @@ internal static class GrassComp
     internal const int SPRITE_WIDTH = 15;
     internal const int SPRITE_HEIGHT = 20;
 
-    internal static bool IsTxValid { get; set; } = false;
-    private static readonly List<IAssetName> sourceAssets = [];
+    private static bool IsTxValid = false;
     private static readonly List<Texture2D> spriteSheets = [];
+    private static Dictionary<IAssetName, PositionOnCompGroup>? assetToPosOnComp = null;
 
-    private static List<GrassVarietyData>? validVarieties = null;
-    private static List<Point>? varietyMaxIndex = null;
-
-    internal static HashSet<byte> GetOffsetY(HashSet<byte>? applyTo)
+    private static Dictionary<IAssetName, PositionOnCompGroup> GetAssetToPosOnComp()
     {
-        if (applyTo == null || applyTo.Count == 0)
-        {
-            return [0, 1, 2, 4];
-        }
+        if (assetToPosOnComp != null)
+            return assetToPosOnComp;
 
-        HashSet<byte> offsetY = [];
-        if (applyTo.Contains(Grass.springGrass))
-        {
-            offsetY.Add(0);
-            offsetY.Add(1);
-            offsetY.Add(2);
-            offsetY.Add(4);
-        }
-        if (applyTo.Contains(Grass.caveGrass))
-        {
-            offsetY.Add(3);
-        }
-        if (applyTo.Contains(Grass.frostGrass))
-        {
-            offsetY.Add(4);
-        }
-        if (applyTo.Contains(Grass.lavaGrass))
-        {
-            offsetY.Add(5);
-        }
-        if (applyTo.Contains(Grass.caveGrass2))
-        {
-            offsetY.Add(6);
-        }
-        if (applyTo.Contains(Grass.cobweb))
-        {
-            offsetY.Add(7);
-        }
-        if (applyTo.Contains(Grass.blueGrass))
-        {
-            offsetY.Add(8);
-            offsetY.Add(9);
-            offsetY.Add(10);
-            offsetY.Add(11);
-        }
-        return offsetY;
-    }
-
-    private static void RecalculateSpriteSheet()
-    {
-        sourceAssets.Clear();
-        validVarieties = AssetManager
+        assetToPosOnComp = [];
+        List<GrassVarietyData> validVarieties = AssetManager
             .RawGrassVarieties.Values.Where(variety =>
                 variety.EnableAtlasOptimization
                 && variety.Weight > 0
                 && !(string.IsNullOrEmpty(variety.Texture) || !Game1.content.DoesAssetExist<Texture2D>(variety.Texture))
             )
             .ToList();
-        varietyMaxIndex = [new(0, 0)];
 
-        int mergedSheetIndex = 0;
-        foreach (GrassVarietyData variety in validVarieties)
+        // first pass gather requirements
+        foreach (GrassVarietyData data in validVarieties)
         {
-            int subVariantCount =
-                variety.SubVariants == null ? 3 : variety.SubVariants.Max() - variety.SubVariants.Min() + 1;
-            Point currCompSheetCoord = varietyMaxIndex[^1];
-            if (currCompSheetCoord.X + subVariantCount > MAX_PER_ROW)
+            IAssetName assetName = ModEntry.content.ParseAssetName(data.Texture);
+            if (!assetToPosOnComp.TryGetValue(assetName, out PositionOnCompGroup? posOnCompGroup))
             {
-                currCompSheetCoord.X = 0;
-                currCompSheetCoord.Y++;
-                if (currCompSheetCoord.Y >= MAX_PER_COL)
+                posOnCompGroup = new();
+                assetToPosOnComp[assetName] = posOnCompGroup;
+            }
+            if (data.ApplyTo == null || data.ApplyTo.Count == 0)
+            {
+                posOnCompGroup.Arr[Grass.springGrass - 1].PopulateXIndexes(data.SubVariants);
+            }
+            else
+            {
+                foreach (byte applyTo in data.ApplyTo)
                 {
-                    mergedSheetIndex++;
-                    currCompSheetCoord = new(0, 0);
-                    varietyMaxIndex.Add(currCompSheetCoord);
+                    posOnCompGroup.Arr[applyTo - 1].PopulateXIndexes(data.SubVariants);
                 }
             }
-            variety.MergedSheetNum = mergedSheetIndex;
-            variety.CompSheetCoord = new(currCompSheetCoord.X, currCompSheetCoord.Y);
+            data.PosOnCompArray = posOnCompGroup.Arr;
+        }
 
-            currCompSheetCoord.X += subVariantCount;
+        // second pass assign sheet/X/Y
+        int maxSheet = 0;
+        int maxSheetX = 0;
+        int maxSheetY = 0;
+        for (byte applyTo = Grass.springGrass; applyTo <= Grass.blueGrass; applyTo++)
+        {
+            int sheet = 0;
+            int x = 0;
+            int y = 0;
+            foreach (PositionOnCompGroup posOnCompGroup in assetToPosOnComp.Values)
+            {
+                PostionOnComp posOnComp = posOnCompGroup.Arr[applyTo - 1];
+                if (posOnComp.XIndexes.Count == 0)
+                    continue;
+                int xIncrease = posOnComp.XIndexes.Max() - posOnComp.XIndexes.Min() + 1;
+                if (x + xIncrease >= MAX_PER_ROW)
+                {
+                    maxSheetX = Math.Max(x, maxSheetX);
+                    x = 0;
+                    y++;
+                    if (y >= MAX_PER_COL)
+                    {
+                        y = 0;
+                        sheet++;
+                        maxSheetX = 0;
+                        maxSheetY = 0;
+                    }
+                }
+                posOnComp.Sheet = sheet;
+                posOnComp.X = x;
+                posOnComp.Y = y;
 
-            varietyMaxIndex[^1] = currCompSheetCoord;
+                x += xIncrease;
+            }
+            if (sheet >= maxSheet)
+            {
+                maxSheet = sheet;
+                maxSheetX = Math.Max(x, maxSheetX);
+                maxSheetY = Math.Max(y, maxSheetY);
+            }
+        }
+
+        // create the sheets
+        for (int i = 0; i <= maxSheet; i++)
+        {
+            int width = (i == maxSheet) ? (maxSheetX * SPRITE_WIDTH) : 4096;
+            int height = i == maxSheet ? ((maxSheetY + 1) * Y_HEIGHT) : 4096;
+            Texture2D targetTexture;
+            if (spriteSheets.Count > i)
+            {
+                targetTexture = spriteSheets[i];
+                if (targetTexture.Width < width || targetTexture.Height < height)
+                {
+                    using Texture2D tempTx = new(Game1.graphics.GraphicsDevice, width, height);
+                    targetTexture.CopyFromTexture(tempTx);
+                }
+            }
+            else
+            {
+                targetTexture = new Texture2D(Game1.game1.GraphicsDevice, width, height)
+                {
+                    Name = $"{ModEntry.ModId}/comp_{i}",
+                };
+                spriteSheets.Add(targetTexture);
+            }
+            Color[] targetData = ArrayPool<Color>.Shared.Rent(targetTexture.GetElementCount());
+            Array.Fill(targetData, Color.ForestGreen);
+            targetTexture.SetData(targetData, 0, targetTexture.GetElementCount());
+        }
+
+        return assetToPosOnComp;
+    }
+
+    internal static IEnumerable<int> ApplyToYIndex(byte applyTo)
+    {
+        switch (applyTo)
+        {
+            case Grass.springGrass:
+                yield return 0;
+                yield return 1;
+                yield return 2;
+                yield return 4;
+                break;
+            case Grass.caveGrass:
+                yield return 3;
+                break;
+            case Grass.frostGrass:
+                yield return 4;
+                break;
+            case Grass.lavaGrass:
+                yield return 5;
+                break;
+            case Grass.caveGrass2:
+                yield return 6;
+                break;
+            case Grass.cobweb:
+                yield return 7;
+                break;
+            case Grass.blueGrass:
+                yield return 8;
+                yield return 9;
+                yield return 10;
+                yield return 11;
+                break;
         }
     }
 
     internal static void RecombineSpriteSheet()
     {
-        if (varietyMaxIndex == null || validVarieties == null)
+        Dictionary<IAssetName, PositionOnCompGroup> AssetToPosOnComp = GetAssetToPosOnComp();
+        for (int i = 0; i < spriteSheets.Count; i++)
         {
-            RecalculateSpriteSheet();
-        }
-        for (int i = 0; i < varietyMaxIndex!.Count; i++)
-        {
-            Point currCompSheetCoord = varietyMaxIndex[i];
-            int width = currCompSheetCoord.Y >= 1 ? MAX_PER_ROW * SPRITE_WIDTH : currCompSheetCoord.X * SPRITE_WIDTH;
-            int height = (currCompSheetCoord.Y + 1) * Y_HEIGHT;
+            Texture2D targetTexture = spriteSheets[i];
+            Color[] targetData = ArrayPool<Color>.Shared.Rent(targetTexture.GetElementCount());
+            targetTexture.GetData(targetData, 0, targetTexture.GetElementCount());
 
-            Texture2D compTx;
-            if (spriteSheets.Count > i)
+            foreach ((IAssetName asset, PositionOnCompGroup posOnCompGroup) in AssetToPosOnComp)
             {
-                compTx = spriteSheets[i];
-                if (compTx.Width < width)
-                {
-                    using Texture2D tempTx = new(Game1.graphics.GraphicsDevice, width, height);
-                    compTx.CopyFromTexture(tempTx);
-                }
-            }
-            else
-            {
-                compTx = new(Game1.graphics.GraphicsDevice, width, height);
-                spriteSheets.Add(compTx);
-            }
-            Color[] targetData = ArrayPool<Color>.Shared.Rent(compTx.GetElementCount());
-            Array.Fill(targetData, Color.LawnGreen);
-
-            foreach (GrassVarietyData variety in validVarieties!)
-            {
-                if (variety.MergedSheetNum != i)
+                if (posOnCompGroup.IsTxValid)
                     continue;
 
-                sourceAssets.Add(ModEntry.ParseAssetName(variety.Texture));
-
-                Texture2D sourceTexture = Game1.content.Load<Texture2D>(variety.Texture);
+                Texture2D sourceTexture = Game1.content.Load<Texture2D>(asset.BaseName);
                 Color[] sourceData = ArrayPool<Color>.Shared.Rent(sourceTexture.GetElementCount());
                 sourceTexture.GetData(sourceData, 0, sourceTexture.GetElementCount());
-
-                foreach (byte applyTo in GetOffsetY(variety.ApplyTo))
+                for (byte applyTo = Grass.springGrass; applyTo <= Grass.blueGrass; applyTo++)
                 {
-                    if (variety.SubVariants == null)
+                    PostionOnComp posOnComp = posOnCompGroup.Arr[applyTo - 1];
+                    if (posOnComp.XIndexes.Count == 0)
+                        continue;
+                    if (posOnComp.Sheet != i)
+                        continue;
+
+                    posOnComp.XBase = posOnComp.X - posOnComp.XIndexes.Min();
+                    foreach (int yindex in ApplyToYIndex(applyTo))
                     {
-                        CopySourceSpriteToTarget(
-                            ref sourceData,
-                            sourceTexture.Width,
-                            new(SPRITE_WIDTH, SPRITE_HEIGHT * applyTo, SPRITE_WIDTH * 3, SPRITE_HEIGHT),
-                            ref targetData,
-                            compTx.Width,
-                            new(
-                                SPRITE_WIDTH * variety.CompSheetCoord.X,
-                                variety.CompSheetCoord.Y * Y_HEIGHT + SPRITE_HEIGHT * applyTo,
-                                SPRITE_WIDTH * 3,
-                                SPRITE_HEIGHT
-                            )
-                        );
-                    }
-                    else
-                    {
-                        foreach (int j in variety.SubVariants.ToHashSet())
+                        foreach (int xindex in posOnComp.XIndexes)
                         {
                             CopySourceSpriteToTarget(
                                 ref sourceData,
                                 sourceTexture.Width,
-                                new(SPRITE_WIDTH * j, SPRITE_HEIGHT * applyTo, SPRITE_WIDTH, SPRITE_HEIGHT),
+                                new Rectangle(
+                                    xindex * SPRITE_WIDTH,
+                                    yindex * SPRITE_HEIGHT,
+                                    SPRITE_WIDTH,
+                                    SPRITE_HEIGHT
+                                ),
                                 ref targetData,
-                                compTx.Width,
-                                new(
-                                    SPRITE_WIDTH * (variety.CompSheetCoord.X + j),
-                                    variety.CompSheetCoord.Y * Y_HEIGHT + SPRITE_HEIGHT * applyTo,
+                                targetTexture.Width,
+                                new Rectangle(
+                                    (posOnComp.XBase + xindex) * SPRITE_WIDTH,
+                                    posOnComp.Y * Y_HEIGHT + yindex * SPRITE_HEIGHT,
                                     SPRITE_WIDTH,
                                     SPRITE_HEIGHT
                                 )
@@ -185,15 +244,13 @@ internal static class GrassComp
                         }
                     }
                 }
-
+                posOnCompGroup.IsTxValid = true;
                 ArrayPool<Color>.Shared.Return(sourceData);
             }
-
-            compTx.SetData(targetData, 0, compTx.GetElementCount());
-            compTx.Name = $"{ModEntry.ModId}/Comp/{i}";
-
+            targetTexture.SetData(targetData, 0, targetTexture.GetElementCount());
             ArrayPool<Color>.Shared.Return(targetData);
         }
+
         IsTxValid = true;
     }
 
@@ -235,39 +292,44 @@ internal static class GrassComp
 
     internal static void InvalidateData()
     {
-        varietyMaxIndex = null;
-        validVarieties = null;
+        assetToPosOnComp = null;
         IsTxValid = false;
     }
 
     internal static void CheckInvalidate(IReadOnlySet<IAssetName> names)
     {
-        if (names.Any(sourceAssets.Contains))
-        {
-            IsTxValid = false;
+        if (assetToPosOnComp == null)
             return;
+        foreach (IAssetName name in names)
+        {
+            if (assetToPosOnComp.TryGetValue(name, out PositionOnCompGroup? posOnCompGroup))
+            {
+                posOnCompGroup.IsTxValid = false;
+                IsTxValid = false;
+            }
         }
     }
 
     /// Based on https://github.com/Pathoschild/StardewMods/blob/95d695b205199de4bad86770d69a30806d1721a2/ContentPatcher/Framework/Commands/Commands/ExportCommand.cs
     /// MIT License
     #region PATCH_EXPORT
-    internal static void Export(string exportDir)
+    internal static void Export(IModHelper helper, string exportDir)
     {
         if (!IsTxValid)
         {
             RecombineSpriteSheet();
         }
-        foreach (Texture2D compTx in spriteSheets)
+        Dictionary<IAssetName, PositionOnCompGroup> assetToPosOnComp = GetAssetToPosOnComp();
+        helper.Data.WriteJsonFile("export/comp.json", assetToPosOnComp);
+        ModEntry.Log($"Export to {exportDir}", LogLevel.Info);
+        ModEntry.Log($"- comp.json", LogLevel.Info);
+        foreach (Texture2D targetTexture in spriteSheets)
         {
-            string pngName = Path.Combine(
-                exportDir,
-                SanitizePath(string.Concat(Path.GetFileName(compTx.Name))) + ".png"
-            );
-            using Texture2D exported = UnPremultiplyTransparency(compTx);
-            using Stream stream = File.Create(pngName);
+            string pngName = SanitizePath(string.Concat(Path.GetFileName(targetTexture.Name)) + ".png");
+            using Texture2D exported = UnPremultiplyTransparency(targetTexture);
+            using Stream stream = File.Create(Path.Combine(exportDir, pngName));
             exported.SaveAsPng(stream, exported.Width, exported.Height);
-            ModEntry.Log($"Exported {pngName}", LogLevel.Info);
+            ModEntry.Log($"- {pngName}", LogLevel.Info);
         }
     }
 

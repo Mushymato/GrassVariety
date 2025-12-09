@@ -119,11 +119,22 @@ public sealed class GrassVarietyData
 
     public bool EnableAtlasOptimization { get; set; } = true;
 
-    internal Point CompSheetCoord { get; set; } = Point.Zero;
-    internal int MergedSheetNum { get; set; } = -1;
+    internal PostionOnComp[]? PosOnCompArray { get; set; } = null;
 
-    internal Texture2D LoadTexture() =>
-        EnableAtlasOptimization ? GrassComp.LoadTexture(MergedSheetNum) : Game1.content.Load<Texture2D>(Texture);
+    internal PostionOnComp? GetPosOnComp(byte applyTo) =>
+        (
+            EnableAtlasOptimization
+            && PosOnCompArray != null
+            && applyTo >= Grass.springGrass
+            && applyTo <= Grass.blueGrass
+        )
+            ? PosOnCompArray[applyTo - 1]
+            : null;
+
+    internal Texture2D LoadTexture(byte applyTo) =>
+        GetPosOnComp(applyTo) is PostionOnComp posOnComp
+            ? GrassComp.LoadTexture(posOnComp.Sheet)
+            : Game1.content.Load<Texture2D>(Texture);
 }
 
 public static class AssetManager

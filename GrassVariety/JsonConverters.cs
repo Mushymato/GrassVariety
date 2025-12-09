@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace GrassVariety;
 
-public class GrassIndexHelper
+public sealed class GrassIndexHelper
 {
     private enum GrassNameToIndex
     {
@@ -26,7 +26,7 @@ public class GrassIndexHelper
     }
 }
 
-public class StringIntListConverter : JsonConverter
+public sealed class StringIntListConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType)
     {
@@ -74,7 +74,7 @@ public class StringIntListConverter : JsonConverter
     }
 }
 
-public class GrassIndexSetConverter : JsonConverter
+public sealed class GrassIndexSetConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType)
     {
@@ -119,7 +119,7 @@ public class GrassIndexSetConverter : JsonConverter
     }
 }
 
-public class GrassDestroyColorListConverter : JsonConverter
+public sealed class GrassDestroyColorListConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType)
     {

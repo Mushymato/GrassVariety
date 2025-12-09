@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Netcode;
 using StardewValley;
 using StardewValley.Delegates;
@@ -7,7 +8,7 @@ using StardewValley.TerrainFeatures;
 
 namespace GrassVariety;
 
-internal class LocationGrassWatcher(GameLocation location) : IDisposable
+internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
 {
     internal const string LocationData_AllowedVarietyPrefix = $"{ModEntry.ModId}_AllowedVarietyPrefix";
 

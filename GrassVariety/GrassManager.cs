@@ -145,25 +145,28 @@ public static class GrassManager
     {
         if (!TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen))
             return;
+        PostionOnComp? posOnComp = chosen.GetPosOnComp(__instance.grassType.Value);
+        int xOffset = posOnComp?.XBase ?? 0;
+        int yOffset = posOnComp?.Y ?? 0;
         if (chosen.SubVariants != null && chosen.SubVariants.Count > 0)
         {
             Random random = GetTileRand(__instance.Tile);
             for (int i = 0; i < 4; i++)
             {
-                ___whichWeed[i] = chosen.CompSheetCoord.X + random.ChooseFrom(chosen.SubVariants);
+                ___whichWeed[i] = xOffset + random.ChooseFrom(chosen.SubVariants);
             }
         }
-        else if (chosen.MergedSheetNum > -1)
+        else
         {
             for (int i = 0; i < 4; i++)
             {
-                ___whichWeed[i] = chosen.CompSheetCoord.X + ___whichWeed[i];
+                ___whichWeed[i] = xOffset + ___whichWeed[i];
             }
         }
-        if (chosen.CompSheetCoord.Y > 0)
+        if (yOffset > 0)
         {
             int yOffsetValue = __instance.grassSourceOffset.Value % GrassComp.Y_HEIGHT;
-            __instance.grassSourceOffset.Value = GrassComp.Y_HEIGHT * chosen.CompSheetCoord.Y + yOffsetValue;
+            __instance.grassSourceOffset.Value = GrassComp.Y_HEIGHT * yOffset + yOffsetValue;
         }
     }
 
@@ -401,7 +404,7 @@ public static class GrassManager
         grass.modData[ModData_ChosenVariant] = chosen.Id;
         if (chosen.Id == AssetManager.DEFAULT)
             return;
-        grass.texture = new Lazy<Texture2D>(chosen.LoadTexture);
+        grass.texture = new Lazy<Texture2D>(() => chosen.LoadTexture(grass.grassType.Value));
         grass.setUpRandom();
     }
 

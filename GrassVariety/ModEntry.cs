@@ -91,7 +91,7 @@ public sealed class ModEntry : Mod
     {
         string exportDir = Path.Combine(Helper.DirectoryPath, "export");
         Directory.CreateDirectory(exportDir);
-        GrassComp.Export(exportDir);
+        GrassComp.Export(Helper, exportDir);
     }
 
     /// <summary>SMAPI static monitor Log wrapper</summary>
