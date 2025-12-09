@@ -30,6 +30,18 @@ public static class GrassManager
 
     internal static void Register(IModHelper helper)
     {
+        if (helper.ModRegistry.IsLoaded("EpicBellyFlop45.MoreGrass"))
+        {
+            ModEntry.Log(
+                $"Grass Variety is not compatible with More Grass (EpicBellyFlop45.MoreGrass) and you will encounter visual errors with both mods installed.",
+                LogLevel.Error
+            );
+            ModEntry.Log(
+                $"You can load More Grass content packs through Grass Variety instead, instructions here: https://github.com/Mushymato/GrassVariety/blob/main/docs/more-grass-shim.md.",
+                LogLevel.Error
+            );
+        }
+
         helper.Events.GameLoop.SaveLoaded += OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
         helper.Events.Player.Warped += OnWarped;
