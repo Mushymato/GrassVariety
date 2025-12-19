@@ -57,14 +57,6 @@ internal sealed class MoreGrassPackContext(
                     continue;
                 string relFile = Path.GetRelativePath(contentPack.DirectoryPath, file);
                 Texture2D srcTx = contentPack.ModContent.Load<Texture2D>(relFile);
-                // if (srcTx.Width > GrassComp.SPRITE_WIDTH || srcTx.Height > GrassComp.SPRITE_HEIGHT)
-                // {
-                //     ModEntry.Log(
-                //         $"More Grass Shim got texture '{file}' with size {srcTx.Width}x{srcTx.Height}. It is larger than the expected size {GrassComp.SPRITE_WIDTH}x{GrassComp.SPRITE_HEIGHT} and will be skipped.",
-                //         LogLevel.Warn
-                //     );
-                //     continue;
-                // }
                 sourceTextureList[(int)season].Add(srcTx);
             }
         }
@@ -201,9 +193,9 @@ internal sealed class MoreGrassPackContext(
     }
 }
 
-internal static class MoreGrassShim
+internal static class MoreGrassCompat
 {
-    private static List<MoreGrassPackContext> packs = [];
+    private static readonly List<MoreGrassPackContext> packs = [];
 
     internal static void Register(IModHelper helper)
     {

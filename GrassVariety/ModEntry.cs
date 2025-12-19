@@ -38,7 +38,7 @@ public sealed class ModEntry : Mod
         helper.ConsoleCommands.Add("gv-grassify", "Put grass everywhere.", ConsoleGrassify);
         helper.ConsoleCommands.Add("gv-export", "Export the combined sheets", ConsoleExport);
 
-        MoreGrassShim.Register(helper);
+        MoreGrassCompat.Register(helper);
     }
 
     internal static IAssetName ParseAssetName(string asset)
