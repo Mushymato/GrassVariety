@@ -210,7 +210,8 @@ internal static class MoreGrassCompat
                 packs.Add(mgpCtx);
             }
         }
-        helper.Events.Content.AssetRequested += OnAssetRequested;
+        if (packs.Any())
+            helper.Events.Content.AssetRequested += OnAssetRequested;
     }
 
     private static void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
