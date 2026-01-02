@@ -1,6 +1,6 @@
 # More Grass Shim
 
-> [!WARNING]  
+> [!WARNING]
 > If you are **creating a new mod**, please follow instructions on [author guide](./author-guide.md) instead!
 
 Grass Variety has the ability to utilize content packs created for More Grass, with these limitations:

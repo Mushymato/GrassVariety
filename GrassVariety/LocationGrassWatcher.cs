@@ -1,9 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Netcode;
 using StardewValley;
 using StardewValley.Delegates;
+using StardewValley.Extensions;
 using StardewValley.TerrainFeatures;
 
 namespace GrassVariety;
@@ -14,6 +13,7 @@ internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
 
     private bool IsActive = false;
     private List<GrassVarietyData>[] grassVarietiesForLocation = AssetManager.InitGrassVarieties();
+    private readonly Dictionary<Grass, int> grassAdditionalSourceOffset = [];
 
     internal static LocationGrassWatcher? Create(GameLocation location)
     {
@@ -100,10 +100,10 @@ internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
             if (feature is not Grass grass)
                 continue;
             GrassManager.ChooseAndApplyGrassVariety(grassVarietiesForLocation, grass);
-            grass.grassSourceOffset.fieldChangeEvent += OnGrassSourceOffsetChanged;
         }
 
         location.terrainFeatures.OnValueAdded += OnNewGrassAdded;
+        location.terrainFeatures.OnValueRemoved += OnGrassRemoved;
         location.terrainFeatures.OnValueTargetUpdated += OnGrassChanged;
         IsActive = true;
     }
@@ -112,41 +112,29 @@ internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
     {
         if (!IsActive)
             return;
-        foreach (TerrainFeature feature in location.terrainFeatures.Values)
-        {
-            if (feature is not Grass grass)
-                continue;
-            grass.grassSourceOffset.fieldChangeEvent -= OnGrassSourceOffsetChanged;
-            grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
-        }
+        grassAdditionalSourceOffset.Clear();
         location.terrainFeatures.OnValueAdded -= OnNewGrassAdded;
+        location.terrainFeatures.OnValueRemoved -= OnGrassRemoved;
         location.terrainFeatures.OnValueTargetUpdated -= OnGrassChanged;
         IsActive = false;
-    }
-
-    private void OnGrassSourceOffsetChanged(NetInt field, int oldValue, int newValue)
-    {
-        if (oldValue >= GrassComp.Y_HEIGHT && newValue < GrassComp.Y_HEIGHT)
-        {
-            int yOffset = oldValue / GrassComp.Y_HEIGHT;
-            field.Value = yOffset * GrassComp.Y_HEIGHT + newValue;
-        }
     }
 
     private void OnNewGrassAdded(Vector2 key, TerrainFeature value)
     {
         if (value is Grass grass)
-        {
             GrassManager.ChooseAndApplyGrassVariety(grassVarietiesForLocation, grass, newPlacement: true);
-        }
+    }
+
+    private void OnGrassRemoved(Vector2 key, TerrainFeature value)
+    {
+        if (value is Grass grass)
+            grassAdditionalSourceOffset.Remove(grass);
     }
 
     private void OnGrassChanged(Vector2 key, TerrainFeature old_target_value, TerrainFeature new_target_value)
     {
-        if (new_target_value is Grass grass)
-        {
-            GrassManager.ChooseAndApplyGrassVariety(grassVarietiesForLocation, grass);
-        }
+        OnGrassRemoved(key, old_target_value);
+        OnNewGrassAdded(key, new_target_value);
     }
 
     public void Dispose()
@@ -156,6 +144,33 @@ internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
         Deactivate();
         grassVarietiesForLocation = null!;
         GC.SuppressFinalize(this);
+    }
+
+    internal void SetGrassSourceOffset()
+    {
+        grassAdditionalSourceOffset.RemoveWhere(kv => kv.Key.Location == null);
+        foreach ((Grass grass, int yOffset) in grassAdditionalSourceOffset)
+        {
+            grass.grassSourceOffset.Value += yOffset * GrassComp.Y_HEIGHT;
+        }
+    }
+
+    internal void UnsetGrassSourceOffset()
+    {
+        foreach ((Grass grass, int yOffset) in grassAdditionalSourceOffset)
+        {
+            grass.grassSourceOffset.Value -= yOffset * GrassComp.Y_HEIGHT;
+        }
+    }
+
+    internal void AddGrassSourceOffset(Grass instance, int yOffset)
+    {
+        grassAdditionalSourceOffset[instance] = yOffset;
+    }
+
+    internal void RemoveGrassSourceOffset(Grass instance)
+    {
+        grassAdditionalSourceOffset.Remove(instance);
     }
 
     ~LocationGrassWatcher() => Dispose();

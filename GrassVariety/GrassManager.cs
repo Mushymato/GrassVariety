@@ -47,6 +47,8 @@ public static class GrassManager
         helper.Events.Player.Warped += OnWarped;
         helper.Events.GameLoop.Saving += OnSaving;
         helper.Events.GameLoop.Saved += OnSaved;
+        helper.Events.Display.RenderingWorld += OnRenderingWorld;
+        helper.Events.Display.RenderedWorld += OnRenderedWorld;
 
         Harmony harmony = new(ModEntry.ModId);
 
@@ -103,6 +105,22 @@ public static class GrassManager
                 LogLevel.Warn
             );
         }
+    }
+
+    private static void OnRenderingWorld(object? sender, RenderingWorldEventArgs e)
+    {
+        if (Game1.currentLocation == null)
+            return;
+        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
+            current?.SetGrassSourceOffset();
+    }
+
+    private static void OnRenderedWorld(object? sender, RenderedWorldEventArgs e)
+    {
+        if (Game1.currentLocation == null)
+            return;
+        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
+            current?.UnsetGrassSourceOffset();
     }
 
     private static void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
@@ -175,10 +193,9 @@ public static class GrassManager
                 ___whichWeed[i] = xOffset + ___whichWeed[i];
             }
         }
-        if (yOffset > 0)
+        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
         {
-            int yOffsetValue = __instance.grassSourceOffset.Value % GrassComp.Y_HEIGHT;
-            __instance.grassSourceOffset.Value = GrassComp.Y_HEIGHT * yOffset + yOffsetValue;
+            current?.AddGrassSourceOffset(__instance, yOffset);
         }
     }
 
@@ -365,7 +382,7 @@ public static class GrassManager
         Random random = GetTileRand(grass.Tile);
         if (TryGetForcedGrassVariety(grass, out GrassVarietyData? chosen))
         {
-            ApplyGrassVariety(grass, newPlacement, chosen, random);
+            ApplyGrassVariety(grass, chosen);
             return;
         }
 
@@ -375,10 +392,11 @@ public static class GrassManager
         List<GrassVarietyData> grassList = gvfcl[grassType - 1];
         if (grassList.Count == 0)
         {
-            UnapplyGrassVarietyState(grass);
+            UnapplyGrassVarietyLooks(grass);
             return;
         }
 
+        chosen = null;
         if (!newPlacement)
         {
             if (
@@ -386,7 +404,7 @@ public static class GrassManager
                 || (int.TryParse(nextRecheckDayStr, out int nextRecheckDay) && Game1.Date.TotalDays >= nextRecheckDay)
             )
             {
-                UnapplyGrassVarietyState(grass);
+                UnapplyGrassVarietyLooks(grass);
             }
             else if (TryGetChosenGrassVariety(grass, out chosen) && !grassList.Contains(chosen))
             {
@@ -406,10 +424,10 @@ public static class GrassManager
                 grass.modData[ModData_NextRecheck] = (Game1.Date.TotalDays + chosen.PersistDays).ToString();
             }
         }
-        ApplyGrassVariety(grass, newPlacement, chosen, random);
+        ApplyGrassVariety(grass, chosen);
     }
 
-    private static void ApplyGrassVariety(Grass grass, bool newPlacement, GrassVarietyData chosen, Random random)
+    private static void ApplyGrassVariety(Grass grass, GrassVarietyData chosen)
     {
         if (chosen == null)
             return;
@@ -431,7 +449,6 @@ public static class GrassManager
         {
             return chosen != null;
         }
-        grass.modData.Remove(ModData_ForcedVariant);
         return false;
     }
 
@@ -446,14 +463,16 @@ public static class GrassManager
         {
             return chosen != null;
         }
-        UnapplyGrassVarietyState(grass);
+        UnapplyGrassVarietyLooks(grass);
         return false;
     }
 
-    private static void UnapplyGrassVarietyState(Grass grass)
+    private static void UnapplyGrassVarietyLooks(Grass grass)
     {
-        grass.grassSourceOffset.Value %= GrassComp.Y_HEIGHT;
-        grass.modData.Remove(ModData_ChosenVariant);
         grass.texture = new Lazy<Texture2D>(() => Game1.content.Load<Texture2D>(AssetManager.DefaultGrassTexture));
+        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
+        {
+            current?.RemoveGrassSourceOffset(grass);
+        }
     }
 }
