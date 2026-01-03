@@ -128,6 +128,9 @@ internal static class GrassComp
             }
         }
 
+        if (maxSheetX == 0 && maxSheetY == 0)
+            return assetToPosOnComp;
+
         // create the sheets
         for (int i = 0; i <= maxSheet; i++)
         {
