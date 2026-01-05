@@ -1,4 +1,5 @@
 using System.Buffers;
+using Force.DeepCloner;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -31,6 +32,13 @@ internal sealed class MoreGrassPackContext(
             return v;
         }
         return defaultValue;
+    }
+
+    private Texture2D LoadTexture2D()
+    {
+        Texture2D txForLoad = new(Game1.graphics.GraphicsDevice, spriteSheet.Width, spriteSheet.Height);
+        txForLoad.CopyFromTexture(spriteSheet);
+        return txForLoad;
     }
 
     internal static MoreGrassPackContext? Make(IContentPack contentPack)
@@ -175,7 +183,7 @@ internal sealed class MoreGrassPackContext(
     {
         if (e.NameWithoutLocale.IsEquivalentTo(grassVarietyData.Texture))
         {
-            e.LoadFrom(() => spriteSheet, AssetLoadPriority.Low, onBehalfOf: contentPack.Manifest.UniqueID);
+            e.LoadFrom(LoadTexture2D, AssetLoadPriority.Low, onBehalfOf: contentPack.Manifest.UniqueID);
         }
         if (e.NameWithoutLocale.IsEquivalentTo(AssetManager.Asset_GrassVariety))
         {
@@ -185,7 +193,7 @@ internal sealed class MoreGrassPackContext(
                     IDictionary<string, GrassVarietyData> gvAssetdata = asset
                         .AsDictionary<string, GrassVarietyData>()
                         .Data;
-                    gvAssetdata[grassVarietyData.Id] = grassVarietyData;
+                    gvAssetdata[grassVarietyData.Id] = grassVarietyData.DeepClone();
                 },
                 AssetEditPriority.Early
             );
