@@ -457,6 +457,7 @@ public static class GrassManager
         chosen = null;
         if (
             grass.modData.TryGetValue(ModData_ChosenVariant, out string chosenId)
+            && chosenId != null
             && AssetManager.RawGrassVarieties.TryGetValue(chosenId, out chosen)
             && (chosen.ApplyTo?.Contains(grass.grassType.Value) ?? false)
         )
