@@ -4,11 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [wip]
+## [1.2.5]
 
 ### Fixed
 
 - Exception when there's no grass packs (lol).
+- More null checking (for mysterious split screen problem)
+- Texture sheet getting disposed when returning to title screen while not in english
 
 ## [1.2.4] - 2026-01-01
 
