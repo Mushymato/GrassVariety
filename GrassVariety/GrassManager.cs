@@ -443,11 +443,12 @@ public static class GrassManager
         chosen = null;
         if (
             grass.modData.TryGetValue(ModData_ForcedVariant, out string chosenId)
+            && chosenId != null
             && AssetManager.RawGrassVarieties.TryGetValue(chosenId, out chosen)
             && (chosen.ApplyTo?.Contains(grass.grassType.Value) ?? false)
         )
         {
-            return chosen != null;
+            return true;
         }
         return false;
     }
@@ -462,7 +463,7 @@ public static class GrassManager
             && (chosen.ApplyTo?.Contains(grass.grassType.Value) ?? false)
         )
         {
-            return chosen != null;
+            return true;
         }
         UnapplyGrassVarietyLooks(grass);
         return false;
