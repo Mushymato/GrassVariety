@@ -10,6 +10,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
     <EnableHarmony>true</EnableHarmony>
+    <ModZipPath>$(MSBuildThisFileDirectory)/../_releases</ModZipPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -19,7 +20,8 @@
     <UniqueId>mushymato.GrassVariety</UniqueId>
     <UpdateKeys>Nexus:36458,GitHub:Mushymato/GrassVariety</UpdateKeys>
     <Version>1.2.6</Version>
-    <MinimumApiVersion_Behavior>UpdateFull</MinimumApiVersion_Behavior>
+    <BaseManifest>new</BaseManifest>
+    <MinimumApiVersion_Behavior>Update</MinimumApiVersion_Behavior>
     <MinimumGameVersion_Behavior>UpdateFull</MinimumGameVersion_Behavior>
     <Dependencies_VersionBehavior>UpdateFull</Dependencies_VersionBehavior>
   </PropertyGroup>
