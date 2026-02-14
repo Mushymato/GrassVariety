@@ -50,7 +50,7 @@ internal sealed class LocationGrassWatcher(GameLocation location) : IDisposable
 
     internal void Activate()
     {
-        if (IsActive)
+        if (IsActive || grassVarietiesForLocation is null)
             return;
         if (!TryGetLocationalProperty(location, LocationData_AllowedVarietyPrefix, out string? allowedVarietyPrefix))
         {
