@@ -58,7 +58,16 @@ internal sealed class MoreGrassPackContext(
         ];
         foreach (Season season in Enum.GetValues<Season>())
         {
-            string seasonDir = Path.Combine(contentPack.DirectoryPath, season.ToString().ToLowerInvariant());
+            string seasonStr = season.ToString().ToLowerInvariant();
+            string seasonDir = Path.Combine(contentPack.DirectoryPath, seasonStr);
+            if (!Directory.Exists(seasonDir))
+            {
+                ModEntry.Log(
+                    $"(MoreGrassCompat) No grass sprites for season '{seasonStr}' for '{contentPack.Manifest.UniqueID}'",
+                    LogLevel.Info
+                );
+                continue;
+            }
             foreach (string file in Directory.GetFiles(seasonDir))
             {
                 if (!file.EndsWith(".png"))
@@ -71,7 +80,10 @@ internal sealed class MoreGrassPackContext(
         int count = sourceTextureList.Max(lst => lst.Count);
         if (count == 0)
         {
-            ModEntry.Log($"No grass sprites found in '{contentPack.Manifest.UniqueID}'");
+            ModEntry.Log(
+                $"(MoreGrassCompat) No grass sprites found in '{contentPack.Manifest.UniqueID}'",
+                LogLevel.Warn
+            );
             return null;
         }
 

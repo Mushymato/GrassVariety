@@ -432,8 +432,6 @@ public static class GrassManager
         if (chosen == null)
             return;
         grass.modData[ModData_ChosenVariant] = chosen.Id;
-        if (chosen.Id == AssetManager.DEFAULT)
-            return;
         grass.texture = new Lazy<Texture2D>(() => chosen.LoadTexture(grass.grassType.Value));
         grass.setUpRandom();
     }

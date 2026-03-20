@@ -45,7 +45,7 @@ internal static class GrassComp
     internal const int SPRITE_WIDTH = 15;
     internal const int SPRITE_HEIGHT = 20;
 
-    private static bool IsTxValid = false;
+    private static bool IsCompValid = false;
     private static readonly List<Texture2D> spriteSheets = [];
     private static Dictionary<IAssetName, PositionOnCompGroup>? assetToPosOnComp = null;
 
@@ -57,10 +57,10 @@ internal static class GrassComp
         assetToPosOnComp = [];
         List<GrassVarietyData> validVarieties = AssetManager
             .RawGrassVarieties.Values.Where(variety =>
-                variety.EnableAtlasOptimization
-                && variety.Weight > 0
+                variety.Weight > 0
                 && !(string.IsNullOrEmpty(variety.Texture) || !Game1.content.DoesAssetExist<Texture2D>(variety.Texture))
             )
+            .OrderBy(variety => variety.ByLocationAllowanceOnly)
             .ToList();
 
         // first pass gather requirements
@@ -157,6 +157,7 @@ internal static class GrassComp
             Color[] targetData = ArrayPool<Color>.Shared.Rent(targetTexture.GetElementCount());
             Array.Fill(targetData, Color.ForestGreen);
             targetTexture.SetData(targetData, 0, targetTexture.GetElementCount());
+            ModEntry.Log($"GrassComp sheet {maxSheet}: {targetTexture.Width}x{targetTexture.Height}");
         }
 
         return assetToPosOnComp;
@@ -254,7 +255,7 @@ internal static class GrassComp
             ArrayPool<Color>.Shared.Return(targetData);
         }
 
-        IsTxValid = true;
+        IsCompValid = true;
     }
 
     internal static void CopySourceSpriteToTarget(
@@ -286,7 +287,7 @@ internal static class GrassComp
 
     internal static Texture2D LoadTexture(int mergedSheetIndex)
     {
-        if (!IsTxValid)
+        if (!IsCompValid)
         {
             RecombineSpriteSheet();
         }
@@ -296,7 +297,7 @@ internal static class GrassComp
     internal static void InvalidateData()
     {
         assetToPosOnComp = null;
-        IsTxValid = false;
+        IsCompValid = false;
     }
 
     internal static void CheckInvalidate(IReadOnlySet<IAssetName> names)
@@ -308,7 +309,7 @@ internal static class GrassComp
             if (assetToPosOnComp.TryGetValue(name, out PositionOnCompGroup? posOnCompGroup))
             {
                 posOnCompGroup.IsTxValid = false;
-                IsTxValid = false;
+                IsCompValid = false;
             }
         }
     }
@@ -318,7 +319,7 @@ internal static class GrassComp
     #region PATCH_EXPORT
     internal static void Export(IModHelper helper, string exportDir)
     {
-        if (!IsTxValid)
+        if (!IsCompValid)
         {
             RecombineSpriteSheet();
         }

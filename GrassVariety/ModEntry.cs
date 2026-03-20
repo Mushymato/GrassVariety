@@ -56,6 +56,7 @@ public sealed class ModEntry : Mod
             Config.DefaultGrassWeight = weight;
         Log($"Default grass weight set to {Config.DefaultGrassWeight}");
         Helper.GameContent.InvalidateCache(AssetManager.Asset_GrassVariety);
+        Helper.WriteConfig(Config);
     }
 
     private void ConsoleGrassify(string cmd, string[] args)

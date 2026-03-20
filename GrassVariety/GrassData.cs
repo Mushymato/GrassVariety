@@ -117,17 +117,10 @@ public sealed class GrassVarietyData
 
     public List<string>? OnCutTileActions { get; set; } = null;
 
-    public bool EnableAtlasOptimization { get; set; } = true;
-
     internal PostionOnComp[]? PosOnCompArray { get; set; } = null;
 
     internal PostionOnComp? GetPosOnComp(byte applyTo) =>
-        (
-            EnableAtlasOptimization
-            && PosOnCompArray != null
-            && applyTo >= Grass.springGrass
-            && applyTo <= Grass.blueGrass
-        )
+        (PosOnCompArray != null && applyTo >= Grass.springGrass && applyTo <= Grass.blueGrass)
             ? PosOnCompArray[applyTo - 1]
             : null;
 
