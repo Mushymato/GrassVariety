@@ -39,11 +39,13 @@ internal sealed class PositionOnCompGroup()
 
 internal static class GrassComp
 {
-    private const int MAX_PER_ROW = 273;
-    private const int MAX_PER_COL = 17;
-    internal const int Y_HEIGHT = 240;
+    private const int MAX_WH = 4096;
     internal const int SPRITE_WIDTH = 15;
     internal const int SPRITE_HEIGHT = 20;
+
+    private const int MAX_PER_ROW = MAX_WH / SPRITE_WIDTH;
+    private const int MAX_PER_COL = MAX_WH / SPRITE_HEIGHT;
+    internal const int Y_HEIGHT = SPRITE_HEIGHT * 12;
 
     private static bool IsCompValid = false;
     private static readonly List<Texture2D> spriteSheets = [];
@@ -60,7 +62,7 @@ internal static class GrassComp
                 variety.Weight > 0
                 && !(string.IsNullOrEmpty(variety.Texture) || !Game1.content.DoesAssetExist<Texture2D>(variety.Texture))
             )
-            .OrderBy(variety => variety.ByLocationAllowanceOnly)
+            .OrderBy(variety => (variety.ByLocationAllowanceOnly, -(variety.SubVariants?.Count ?? 3)))
             .ToList();
 
         // first pass gather requirements

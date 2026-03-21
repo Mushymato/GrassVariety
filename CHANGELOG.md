@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [1.2.6]
 
+### Changed
+
+- Removed `EnableAtlasOptimization` from the data model, altas optimization is now always on
+
 ### Fixed
 
 - DEFAULT grass becoming invisible

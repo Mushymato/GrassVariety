@@ -78,10 +78,7 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
       "OnCutTileActions": [
         // See https://stardewvalleywiki.com/Modding:Maps#Action
         "tile action string"
-      ],
-      // If true, combines the grass texture into 1 big texture
-      // This is to improve performance.
-      "EnableAtlasOptimization": true
+      ]
     },
   }
 }
