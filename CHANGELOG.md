@@ -4,16 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.6]
+## [1.2.7]
 
 ### Changed
 
 - Removed `EnableAtlasOptimization` from the data model, altas optimization is now always on
+- Removed `Id` field, take key as truth
 
 ### Fixed
 
 - DEFAULT grass becoming invisible
 - Missing season folder no longer cause error for more grass compat
+
+## [1.2.6]
+
+### Fixed
+
+- May fix an NRE?
 
 ## [1.2.5]
 

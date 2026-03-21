@@ -90,7 +90,7 @@ public sealed class GrassOnCutItemSpawnData : GenericSpawnItemDataWithCondition
 
 public sealed class GrassVarietyData
 {
-    public string Id { get; set; } = AssetManager.DEFAULT;
+    internal string Id { get; set; } = AssetManager.DEFAULT;
 
     public string Texture { get; set; } = AssetManager.DefaultGrassTexture;
 

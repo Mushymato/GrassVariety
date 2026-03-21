@@ -17,8 +17,6 @@ To add your new grass variety, do `EditData` on `mushymato.GrassVariety/Data`.
       // =============== //
       // Required Fields //
       // =============== //
-      // Id must be same as key, if they are different the key is taken as truth.
-      "Id": "{{ModId}}_YourGrassVariety",
       // The texture must be loaded (via Load or InternalAssetKey)
       "Texture": "{{ModId}}/YourGrassTexture",
       // Which grass kind this variety should apply to
