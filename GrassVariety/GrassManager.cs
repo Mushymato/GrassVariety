@@ -470,7 +470,7 @@ public static class GrassManager
     private static void UnapplyGrassVarietyLooks(Grass grass)
     {
         grass.texture = new Lazy<Texture2D>(() => Game1.content.Load<Texture2D>(AssetManager.DefaultGrassTexture));
-        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
+        if (grass.Location != null && grassWatchers.TryGetValue(grass.Location, out LocationGrassWatcher? current))
         {
             current?.RemoveGrassSourceOffset(grass);
         }
