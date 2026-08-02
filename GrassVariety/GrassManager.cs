@@ -173,6 +173,8 @@ public static class GrassManager
 
     private static void Grass_setUpRandom_Postfix(Grass __instance, ref int[] ___whichWeed)
     {
+        if ((__instance.Location ?? Game1.currentLocation) is not GameLocation location)
+            return;
         if (!TryGetChosenGrassVariety(__instance, out GrassVarietyData? chosen))
             return;
         PostionOnComp? posOnComp = chosen.GetPosOnComp(__instance.grassType.Value);
@@ -193,7 +195,7 @@ public static class GrassManager
                 ___whichWeed[i] = xOffset + ___whichWeed[i];
             }
         }
-        if (grassWatchers.TryGetValue(Game1.currentLocation, out LocationGrassWatcher? current))
+        if (grassWatchers.TryGetValue(location, out LocationGrassWatcher? current))
         {
             current?.AddGrassSourceOffset(__instance, yOffset);
         }
